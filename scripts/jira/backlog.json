@@ -1,0 +1,497 @@
+{
+  "project": "VIT",
+  "boardHint": "Scrum team-managed",
+  "sprints": [
+    { "id": "S0", "name": "S0 - Kickoff e infraestructura", "goal": "Repo, ADRs, entorno local reproducible, Flyway y CI en verde" },
+    { "id": "S1", "name": "S1 - Autenticacion y cuentas", "goal": "Registro, verificacion por email, login, refresh rotativo y 2FA de punta a punta" },
+    { "id": "S2", "name": "S2 - Catalogo", "goal": "Especialidades, centros y cuadro medico paginados y visibles en React" },
+    { "id": "S3", "name": "S3 - Reserva de citas", "goal": "Agenda, huecos, reserva y cancelacion con anti-doble-reserva probado" },
+    { "id": "S4", "name": "S4 - Perfil y datos clinicos", "goal": "Perfil editable, cifrado en reposo y sesiones activas" },
+    { "id": "S5", "name": "S5 - Informes y ficheros", "goal": "Almacenamiento S3, URLs prefirmadas y descarga auditada" },
+    { "id": "S6", "name": "S6 - Panel de administracion", "goal": "CRUD de usuarios, medicos y especialidades con roles y auditoria" },
+    { "id": "S7", "name": "S7 - RGPD", "goal": "Consentimientos, exportacion de datos y supresion con anonimizacion" },
+    { "id": "S8", "name": "S8 - Calidad y salida a produccion", "goal": "E2E, observabilidad, despliegue y demo publica" }
+  ],
+  "epics": [
+    {
+      "id": "E0",
+      "summary": "Kickoff e infraestructura",
+      "description": "Base del proyecto: decisiones escritas, entorno local reproducible, migraciones versionadas y pipeline de CI.",
+      "labels": ["infra", "docs"],
+      "stories": [
+        {
+          "summary": "Escribir los ADR 0001-0008",
+          "sprint": "S0",
+          "points": 3,
+          "labels": ["docs"],
+          "as": "Como responsable técnico quiero las decisiones de arquitectura escritas para que nadie las reabra sin contexto",
+          "ac": ["Dado el proyecto sin ADRs", "Cuando se cierra la fase 0", "Entonces existen docs/adr/0001..0008 con estado Aceptado y consecuencias"]
+        },
+        {
+          "summary": "Entorno local con Docker Compose (Postgres, MinIO, Mailpit)",
+          "sprint": "S0",
+          "points": 3,
+          "labels": ["infra"],
+          "as": "Como desarrollador quiero levantar las dependencias con un comando para no depender de servicios cloud en desarrollo",
+          "ac": ["Dado un equipo limpio con Docker", "Cuando ejecuto docker compose up -d", "Entonces Postgres, MinIO y Mailpit responden a sus healthchecks"]
+        },
+        {
+          "summary": "Esqueleto del backend Spring Boot con package-by-feature",
+          "sprint": "S0",
+          "points": 5,
+          "labels": ["backend"],
+          "as": "Como desarrollador quiero el esqueleto modular creado para empezar cada feature en su sitio",
+          "ac": ["Dado el proyecto generado", "Cuando ejecuto ./mvnw verify", "Entonces compila, pasa el test de arquitectura ArchUnit y /actuator/health responde 200"]
+        },
+        {
+          "summary": "Migración Flyway V1 con el esquema base",
+          "sprint": "S0",
+          "points": 5,
+          "labels": ["db"],
+          "as": "Como desarrollador quiero el esquema versionado para que cualquier entorno se reconstruya igual",
+          "ac": ["Dada una base de datos vacía", "Cuando arranca la aplicación", "Entonces Flyway aplica V1 y Hibernate valida el mapeo sin errores"]
+        },
+        {
+          "summary": "Pipeline de CI en GitHub Actions",
+          "sprint": "S0",
+          "points": 3,
+          "labels": ["infra"],
+          "as": "Como equipo quiero que ningún PR se mergee en rojo para proteger la rama principal",
+          "ac": ["Dado un PR abierto", "Cuando se ejecuta el workflow", "Entonces corren lint, tests, gitleaks y el chequeo de drift del OpenAPI"]
+        },
+        {
+          "summary": "Esqueleto del frontend React + TypeScript + Tailwind",
+          "sprint": "S0",
+          "points": 3,
+          "labels": ["frontend"],
+          "as": "Como desarrollador quiero la SPA inicializada con las convenciones acordadas para empezar por features",
+          "ac": ["Dado el proyecto creado con Vite", "Cuando ejecuto pnpm dev", "Entonces arranca con TypeScript estricto, Tailwind y la estructura feature-sliced"]
+        }
+      ]
+    },
+    {
+      "id": "E1",
+      "summary": "Autenticación y cuentas",
+      "description": "Identidad, sesión y recuperación. Access token en memoria, refresh opaco rotativo en cookie httpOnly.",
+      "labels": ["backend", "security"],
+      "stories": [
+        {
+          "summary": "Registro de paciente con validación de NIF",
+          "sprint": "S1",
+          "points": 5,
+          "labels": ["backend", "security"],
+          "as": "Como visitante quiero registrarme para poder reservar citas",
+          "ac": ["Dado un NIF con letra de control válida y una contraseña de 12+ caracteres", "Cuando envío POST /api/v1/auth/register", "Entonces se crea el usuario en estado PENDING_VERIFICATION y se encola el email de verificación", "Y si el NIF o el email ya existen recibo 409 sin revelar cuál"]
+        },
+        {
+          "summary": "Verificación de email por código de un solo uso",
+          "sprint": "S1",
+          "points": 3,
+          "labels": ["backend"],
+          "as": "Como usuario registrado quiero verificar mi email para activar la cuenta",
+          "ac": ["Dado un código generado con SecureRandom y vigente 10 minutos", "Cuando lo envío a POST /api/v1/auth/verify", "Entonces la cuenta pasa a ACTIVE", "Y tras 10 intentos fallidos el rate limiter responde 429"]
+        },
+        {
+          "summary": "Login con access token RS256 y refresh opaco",
+          "sprint": "S1",
+          "points": 5,
+          "labels": ["backend", "security"],
+          "as": "Como usuario quiero iniciar sesión para acceder a mis datos",
+          "ac": ["Dadas credenciales válidas", "Cuando envío POST /api/v1/auth/login", "Entonces recibo un access token de 15 minutos y una cookie httpOnly con el refresh", "Y con credenciales inválidas recibo 401 con mensaje genérico"]
+        },
+        {
+          "summary": "Rotación de refresh token con detección de reuso",
+          "sprint": "S1",
+          "points": 8,
+          "labels": ["backend", "security"],
+          "as": "Como responsable de seguridad quiero invalidar familias de tokens robados para cortar el secuestro de sesión",
+          "ac": ["Dado un refresh ya consumido", "Cuando se vuelve a presentar", "Entonces se revoca toda la familia y se devuelve 401", "Y queda registrado en audit_logs"]
+        },
+        {
+          "summary": "Segundo factor por email en el login",
+          "sprint": "S1",
+          "points": 5,
+          "labels": ["backend", "security"],
+          "as": "Como usuario quiero un segundo factor para proteger mis datos de salud",
+          "ac": ["Dado un usuario con 2FA activado", "Cuando el login es correcto", "Entonces recibo 202 y un código por email en lugar del token", "Y el token solo se emite tras POST /api/v1/auth/login/2fa correcto"]
+        },
+        {
+          "summary": "Pantallas de login y registro en React",
+          "sprint": "S1",
+          "points": 5,
+          "labels": ["frontend"],
+          "as": "Como usuario quiero formularios claros y accesibles para entrar sin fricción",
+          "ac": ["Dado el formulario validado con Zod", "Cuando envío datos inválidos", "Entonces veo el error junto al campo y el foco se mueve al primero fallido"]
+        },
+        {
+          "summary": "Cliente HTTP tipado con refresh single-flight",
+          "sprint": "S1",
+          "points": 5,
+          "labels": ["frontend", "security"],
+          "as": "Como desarrollador frontend quiero un único punto de acceso a la API para centralizar la sesión",
+          "ac": ["Dadas N peticiones que reciben 401 a la vez", "Cuando el interceptor refresca", "Entonces solo se emite una llamada a /auth/refresh y todas se reintentan"]
+        },
+        {
+          "summary": "Recuperación de cuenta por preguntas de seguridad",
+          "sprint": "S1",
+          "points": 5,
+          "labels": ["backend", "security"],
+          "as": "Como usuario que olvidó la contraseña quiero recuperarla sin soporte humano",
+          "ac": ["Dadas dos respuestas correctas y el código enviado por email", "Cuando completo el reseteo", "Entonces la contraseña cambia y se revocan todas mis sesiones"]
+        }
+      ]
+    },
+    {
+      "id": "E2",
+      "summary": "Catálogo",
+      "description": "Especialidades, centros, cuadro médico y enfermedades. Lectura pública paginada.",
+      "labels": ["backend", "frontend"],
+      "stories": [
+        {
+          "summary": "API de especialidades con paginación y filtros",
+          "sprint": "S2",
+          "points": 3,
+          "labels": ["backend"],
+          "as": "Como visitante quiero consultar las especialidades para orientarme antes de pedir cita",
+          "ac": ["Dado el catálogo poblado", "Cuando pido GET /api/v1/specialties con page y size", "Entonces recibo una página con metadatos y solo especialidades activas"]
+        },
+        {
+          "summary": "API de centros médicos",
+          "sprint": "S2",
+          "points": 2,
+          "labels": ["backend"],
+          "as": "Como visitante quiero ver los centros disponibles para elegir el más cercano",
+          "ac": ["Dado un centro activo", "Cuando pido GET /api/v1/facilities", "Entonces recibo nombre, dirección, ciudad y teléfono"]
+        },
+        {
+          "summary": "API del cuadro médico filtrable por especialidad y centro",
+          "sprint": "S2",
+          "points": 5,
+          "labels": ["backend"],
+          "as": "Como paciente quiero buscar profesionales por especialidad para elegir con quién voy",
+          "ac": ["Dado el filtro por especialidad", "Cuando consulto GET /api/v1/doctors", "Entonces el filtrado ocurre en SQL, no en memoria", "Y la respuesta solo incluye datos públicos del profesional"]
+        },
+        {
+          "summary": "Catálogo de enfermedades y tratamientos",
+          "sprint": "S2",
+          "points": 3,
+          "labels": ["backend"],
+          "as": "Como visitante quiero consultar enfermedades y sus tratamientos para informarme",
+          "ac": ["Dado el catálogo cargado", "Cuando pido GET /api/v1/diseases", "Entonces recibo la enfermedad con sus tratamientos y la especialidad relacionada"]
+        },
+        {
+          "summary": "Pantallas de catálogo en React con TanStack Query",
+          "sprint": "S2",
+          "points": 5,
+          "labels": ["frontend"],
+          "as": "Como visitante quiero navegar el catálogo rápido y sin recargas para encontrar lo que busco",
+          "ac": ["Dada una lista ya cargada", "Cuando vuelvo a la misma ruta", "Entonces se muestra desde caché y se revalida en segundo plano"]
+        },
+        {
+          "summary": "Datos de demo (seed) para desarrollo",
+          "sprint": "S2",
+          "points": 3,
+          "labels": ["db", "infra"],
+          "as": "Como desarrollador quiero datos realistas en local para probar sin inventarlos cada vez",
+          "ac": ["Dado el perfil demo activo", "Cuando arranca la aplicación", "Entonces existen especialidades, centros, profesionales y un paciente de prueba", "Y el seed nunca se aplica en producción"]
+        }
+      ]
+    },
+    {
+      "id": "E3",
+      "summary": "Reserva de citas",
+      "description": "Agenda del profesional, generación de huecos, reserva, cancelación y garantía anti-doble-reserva.",
+      "labels": ["backend", "frontend"],
+      "stories": [
+        {
+          "summary": "Modelo de agenda: reglas semanales y excepciones",
+          "sprint": "S3",
+          "points": 5,
+          "labels": ["backend", "db"],
+          "as": "Como profesional quiero definir mi disponibilidad semanal para que solo se reserven horas válidas",
+          "ac": ["Dada una regla de lunes de 09:00 a 14:00 con huecos de 20 minutos", "Cuando se consulta la agenda", "Entonces se generan los huecos correspondientes salvo los cubiertos por una excepción"]
+        },
+        {
+          "summary": "Consulta de huecos disponibles",
+          "sprint": "S3",
+          "points": 5,
+          "labels": ["backend"],
+          "as": "Como paciente quiero ver los huecos libres de un profesional para elegir cuándo ir",
+          "ac": ["Dado un profesional con citas ya reservadas", "Cuando pido los huecos de un rango de fechas", "Entonces los huecos ocupados no aparecen", "Y no se devuelven huecos en el pasado"]
+        },
+        {
+          "summary": "Reservar cita con garantía anti-doble-reserva",
+          "sprint": "S3",
+          "points": 8,
+          "labels": ["backend", "db"],
+          "as": "Como paciente quiero reservar un hueco para ser atendido",
+          "ac": ["Dado un hueco libre", "Cuando envío POST /api/v1/appointments", "Entonces recibo 201 con la cita creada", "Y si diez peticiones concurrentes piden el mismo hueco solo una recibe 201 y el resto 409 APPOINTMENT_SLOT_TAKEN"]
+        },
+        {
+          "summary": "Cancelar cita con comprobación de propiedad",
+          "sprint": "S3",
+          "points": 3,
+          "labels": ["backend", "security"],
+          "as": "Como paciente quiero cancelar mi cita para liberar el hueco",
+          "ac": ["Dada una cita de otro paciente", "Cuando intento cancelarla", "Entonces recibo 403 y no cambia nada", "Y al cancelar la propia el hueco vuelve a estar disponible"]
+        },
+        {
+          "summary": "Email de confirmación mediante outbox transaccional",
+          "sprint": "S3",
+          "points": 5,
+          "labels": ["backend", "infra"],
+          "as": "Como paciente quiero recibir confirmación por email para tener constancia de mi cita",
+          "ac": ["Dada una cita creada", "Cuando la transacción confirma", "Entonces existe una fila en outbox_messages", "Y si el proveedor de email falla el worker reintenta con backoff sin perder el mensaje"]
+        },
+        {
+          "summary": "Asistente de reserva en React",
+          "sprint": "S3",
+          "points": 8,
+          "labels": ["frontend"],
+          "as": "Como paciente quiero un asistente guiado para reservar en pocos pasos",
+          "ac": ["Dado el flujo especialidad, centro, profesional, fecha y confirmación", "Cuando el hueco se ocupa mientras elijo", "Entonces veo un aviso claro y el calendario se refresca"]
+        },
+        {
+          "summary": "Prueba E2E del flujo de reserva",
+          "sprint": "S3",
+          "points": 3,
+          "labels": ["frontend"],
+          "as": "Como equipo quiero cubrir el camino crítico para detectar regresiones antes de desplegar",
+          "ac": ["Dado un usuario de prueba", "Cuando ejecuto la suite de Playwright", "Entonces el flujo login, reservar, ver en el perfil y cancelar pasa en verde"]
+        }
+      ]
+    },
+    {
+      "id": "E4",
+      "summary": "Perfil y datos clínicos",
+      "description": "Datos personales, campos clínicos cifrados, sesiones activas y preferencias.",
+      "labels": ["backend", "security"],
+      "stories": [
+        {
+          "summary": "Cifrado en reposo AES-256-GCM con versión de clave",
+          "sprint": "S4",
+          "points": 8,
+          "labels": ["backend", "security", "gdpr"],
+          "as": "Como responsable de cumplimiento quiero los datos de salud cifrados para satisfacer el Art. 32 RGPD",
+          "ac": ["Dado un campo clínico guardado", "Cuando lo consulto directamente en la base de datos", "Entonces es ilegible y lleva prefijo de versión de clave", "Y la aplicación puede descifrar valores de versiones anteriores"]
+        },
+        {
+          "summary": "Blind index para búsqueda por NIF cifrado",
+          "sprint": "S4",
+          "points": 5,
+          "labels": ["backend", "db", "security"],
+          "as": "Como administrador quiero buscar por NIF sin descifrar toda la tabla para que la búsqueda sea viable",
+          "ac": ["Dado un NIF cifrado", "Cuando busco por su valor exacto", "Entonces la consulta usa el índice único sobre nif_hash"]
+        },
+        {
+          "summary": "Ver y editar el perfil propio",
+          "sprint": "S4",
+          "points": 5,
+          "labels": ["backend", "frontend"],
+          "as": "Como paciente quiero mantener mis datos al día para que la atención sea correcta",
+          "ac": ["Dado un usuario autenticado", "Cuando actualiza su perfil", "Entonces el email no es editable y los campos clínicos se guardan cifrados", "Y otro usuario no puede editar ese perfil y recibe 403"]
+        },
+        {
+          "summary": "Gestión de sesiones activas",
+          "sprint": "S4",
+          "points": 5,
+          "labels": ["backend", "frontend", "security"],
+          "as": "Como usuario quiero ver y cerrar mis sesiones para controlar quién accede a mi cuenta",
+          "ac": ["Dadas varias sesiones abiertas", "Cuando consulto mis sesiones", "Entonces veo dispositivo, IP y último uso", "Y puedo cerrar una concreta o todas menos la actual"]
+        },
+        {
+          "summary": "Cambio de contraseña con revocación de sesiones",
+          "sprint": "S4",
+          "points": 3,
+          "labels": ["backend", "security"],
+          "as": "Como usuario quiero cambiar la contraseña para reaccionar ante una sospecha",
+          "ac": ["Dada la contraseña actual correcta", "Cuando la cambio", "Entonces se revocan el resto de sesiones y recibo un email de aviso"]
+        }
+      ]
+    },
+    {
+      "id": "E5",
+      "summary": "Informes y ficheros",
+      "description": "Documentos clínicos, almacenamiento S3-compatible, URLs prefirmadas y acceso auditado.",
+      "labels": ["backend", "security"],
+      "stories": [
+        {
+          "summary": "Integración con almacenamiento S3-compatible",
+          "sprint": "S5",
+          "points": 5,
+          "labels": ["backend", "infra"],
+          "as": "Como desarrollador quiero un servicio de almacenamiento único para no acoplarme al proveedor",
+          "ac": ["Dado MinIO en local y S3 en producción", "Cuando subo un fichero", "Entonces el código es el mismo y solo cambia la configuración"]
+        },
+        {
+          "summary": "Subida directa con URL prefirmada y validación de MIME real",
+          "sprint": "S5",
+          "points": 8,
+          "labels": ["backend", "security"],
+          "as": "Como paciente quiero adjuntar documentos sin esperas para completar mi historial",
+          "ac": ["Dada una URL prefirmada emitida por la API", "Cuando subo el fichero al bucket y confirmo", "Entonces se valida el tipo real por magic bytes y el tamaño", "Y un fichero renombrado con extensión falsa se rechaza con 400"]
+        },
+        {
+          "summary": "Descarga de informes con auditoría de acceso",
+          "sprint": "S5",
+          "points": 5,
+          "labels": ["backend", "gdpr"],
+          "as": "Como paciente quiero saber que cada acceso a mi historia queda registrado según la Ley 41/2002",
+          "ac": ["Dada una descarga autorizada", "Cuando se emite la URL prefirmada", "Entonces se registra en audit_logs con actor, recurso y trace id", "Y el enlace caduca en 60 segundos"]
+        },
+        {
+          "summary": "Sección de informes en el perfil",
+          "sprint": "S5",
+          "points": 5,
+          "labels": ["frontend"],
+          "as": "Como paciente quiero consultar y descargar mis informes para llevarlos a consulta",
+          "ac": ["Dado un listado paginado", "Cuando filtro por tipo o fecha", "Entonces la lista se actualiza sin recargar la página"]
+        }
+      ]
+    },
+    {
+      "id": "E6",
+      "summary": "Panel de administración",
+      "description": "Gestión de usuarios, profesionales y catálogo con control de rol y trazabilidad.",
+      "labels": ["backend", "frontend"],
+      "stories": [
+        {
+          "summary": "CRUD de usuarios para administradores",
+          "sprint": "S6",
+          "points": 5,
+          "labels": ["backend", "security"],
+          "as": "Como administrador quiero gestionar las cuentas para operar el servicio",
+          "ac": ["Dado un administrador autenticado", "Cuando lista usuarios", "Entonces la respuesta es paginada y sin hashes ni códigos", "Y un usuario sin rol ADMIN recibe 403"]
+        },
+        {
+          "summary": "Alta y edición de profesionales con su especialidad",
+          "sprint": "S6",
+          "points": 5,
+          "labels": ["backend"],
+          "as": "Como administrador quiero dar de alta profesionales para mantener el cuadro médico",
+          "ac": ["Dado un alta de profesional", "Cuando se crea", "Entonces se crean usuario y perfil en la misma transacción", "Y no pueden quedar perfiles huérfanos"]
+        },
+        {
+          "summary": "Gestión del catálogo de especialidades y enfermedades",
+          "sprint": "S6",
+          "points": 3,
+          "labels": ["backend"],
+          "as": "Como administrador quiero mantener el catálogo para reflejar la oferta real",
+          "ac": ["Dada una especialidad en uso", "Cuando intento borrarla", "Entonces se desactiva en lugar de borrarse"]
+        },
+        {
+          "summary": "Interfaz del panel de administración",
+          "sprint": "S6",
+          "points": 8,
+          "labels": ["frontend"],
+          "as": "Como administrador quiero un panel claro para trabajar rápido",
+          "ac": ["Dadas tablas con paginación, búsqueda y orden", "Cuando ejecuto una acción destructiva", "Entonces se pide confirmación explícita"]
+        },
+        {
+          "summary": "Matriz de pruebas de autorización rol por endpoint",
+          "sprint": "S6",
+          "points": 5,
+          "labels": ["security"],
+          "as": "Como responsable de seguridad quiero probar cada combinación de rol y endpoint para evitar IDOR",
+          "ac": ["Dado un usuario sin permiso sobre un recurso ajeno", "Cuando lo solicita", "Entonces recibe 403 en todos los endpoints privados", "Y existe un test automático por endpoint"]
+        }
+      ]
+    },
+    {
+      "id": "E7",
+      "summary": "RGPD",
+      "description": "Consentimientos, derecho de acceso, portabilidad y supresión con anonimización.",
+      "labels": ["gdpr"],
+      "stories": [
+        {
+          "summary": "Registro de consentimientos versionado",
+          "sprint": "S7",
+          "points": 5,
+          "labels": ["gdpr", "backend"],
+          "as": "Como responsable de cumplimiento quiero probar cuándo y a qué consintió cada usuario",
+          "ac": ["Dado un cambio en la política", "Cuando el usuario acepta", "Entonces se guarda tipo, versión, fecha e IP sin sobrescribir el histórico"]
+        },
+        {
+          "summary": "Derecho de acceso y portabilidad (exportación)",
+          "sprint": "S7",
+          "points": 8,
+          "labels": ["gdpr", "backend"],
+          "as": "Como usuario quiero descargar todos mis datos para ejercer mis derechos",
+          "ac": ["Dada una solicitud verificada con contraseña y código por email", "Cuando se completa", "Entonces recibo un ZIP con JSON legible por máquina", "Y una segunda solicitud en menos de 24 horas devuelve 429 con Retry-After"]
+        },
+        {
+          "summary": "Derecho de supresión con anonimización",
+          "sprint": "S7",
+          "points": 8,
+          "labels": ["gdpr", "backend"],
+          "as": "Como usuario quiero eliminar mi cuenta respetando la conservación clínica legal",
+          "ac": ["Dada una solicitud de supresión", "Cuando se ejecuta", "Entonces los datos identificativos se anonimizan y la documentación clínica se conserva el plazo legal", "Y los audit_logs mantienen la traza con actor seudonimizado"]
+        },
+        {
+          "summary": "Panel de privacidad para el usuario",
+          "sprint": "S7",
+          "points": 5,
+          "labels": ["frontend", "gdpr"],
+          "as": "Como usuario quiero gestionar mi privacidad desde la aplicación para no depender de soporte",
+          "ac": ["Dado el panel de privacidad", "Cuando entro", "Entonces veo consentimientos, exportación, supresión y el historial de accesos a mi historia"]
+        },
+        {
+          "summary": "Documentación de cumplimiento (Art. 30, DPIA, retención)",
+          "sprint": "S7",
+          "points": 5,
+          "labels": ["gdpr", "docs"],
+          "as": "Como responsable quiero la documentación legal preparada para superar una auditoría",
+          "ac": ["Dado el tratamiento de datos de salud", "Cuando se revisa la documentación", "Entonces existen registro de actividades, DPIA, política de retención y procedimiento de brechas"]
+        }
+      ]
+    },
+    {
+      "id": "E8",
+      "summary": "Calidad y salida a producción",
+      "description": "Observabilidad, rendimiento, despliegue y presentación del proyecto.",
+      "labels": ["infra", "docs"],
+      "stories": [
+        {
+          "summary": "Logs estructurados con trace id de extremo a extremo",
+          "sprint": "S8",
+          "points": 5,
+          "labels": ["infra"],
+          "as": "Como desarrollador quiero correlacionar un error del usuario con sus logs para diagnosticar rápido",
+          "ac": ["Dada una petición", "Cuando falla", "Entonces el mismo trace id aparece en el ProblemDetail, en los logs y en audit_logs"]
+        },
+        {
+          "summary": "Métricas de negocio y health checks",
+          "sprint": "S8",
+          "points": 3,
+          "labels": ["infra"],
+          "as": "Como responsable quiero medir el uso real para detectar problemas antes que los usuarios",
+          "ac": ["Dado Micrometer configurado", "Cuando consulto las métricas", "Entonces existen contadores de citas reservadas, logins fallidos y outbox pendiente"]
+        },
+        {
+          "summary": "Despliegue de API, web y base de datos",
+          "sprint": "S8",
+          "points": 8,
+          "labels": ["infra"],
+          "as": "Como autor del portfolio quiero una demo pública para que se pueda probar sin instalar nada",
+          "ac": ["Dado un merge a main", "Cuando pasa la CI", "Entonces se despliega automáticamente y las migraciones se aplican antes de arrancar"]
+        },
+        {
+          "summary": "Suite E2E y auditoría de accesibilidad",
+          "sprint": "S8",
+          "points": 5,
+          "labels": ["frontend"],
+          "as": "Como equipo quiero cubrir los flujos críticos y la accesibilidad para entregar con confianza",
+          "ac": ["Dada la suite de Playwright con axe", "Cuando se ejecuta en CI", "Entonces pasan los diez flujos críticos sin violaciones graves de accesibilidad"]
+        },
+        {
+          "summary": "README de portfolio, diagramas y postmortem de v1",
+          "sprint": "S8",
+          "points": 5,
+          "labels": ["docs"],
+          "as": "Como candidato quiero que el proyecto se entienda en cinco minutos para destacar en una revisión técnica",
+          "ac": ["Dado un revisor externo", "Cuando abre el repositorio", "Entonces encuentra demo, credenciales de prueba, diagrama C4, ADRs y el postmortem de v1"]
+        }
+      ]
+    }
+  ]
+}
