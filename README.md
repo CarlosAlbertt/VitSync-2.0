@@ -79,6 +79,7 @@ vitsync-2.0/
 | [docs/HANDOFF.md](docs/HANDOFF.md) | Dónde está el trabajo y cuál es el siguiente paso |
 | [docs/JIRA_SETUP.md](docs/JIRA_SETUP.md) | Montar el tablero como en una empresa |
 | [docs/adr/](docs/adr) | Decisiones de arquitectura, una por fichero |
+| [docs/VADEMECUM.md](docs/VADEMECUM.md) | Glosario técnico: 193 términos de ingeniería de software y AI engineering |
 
 ---
 
