@@ -105,6 +105,7 @@ vitsync-2.0/
 | [docs/JIRA_SETUP.md](docs/JIRA_SETUP.md) | Montar el tablero como en una empresa |
 | [docs/DUDAS_Y_CAMBIOS.md](docs/DUDAS_Y_CAMBIOS.md) | Cambios estructurales del repo y dudas abiertas |
 | [docs/adr/](docs/adr) | Decisiones de arquitectura, una por fichero |
+| [docs/VADEMECUM.md](docs/VADEMECUM.md) | Glosario técnico: 193 términos de ingeniería de software y AI engineering |
 
 ---
 
