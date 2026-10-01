@@ -86,10 +86,10 @@ y es lo que se debe repetir en v2):
 |---|---|---|---|
 | BD | PostgreSQL 15 (Neon) | **PostgreSQL 16** (Neon/Supabase o Docker local) | Se mantiene, como pediste |
 | Migraciones | scripts SQL manuales | **Flyway** | Reproducible, versionado, ejecutable en CI |
-| Backend | Spring Boot 3.2.5 | **Spring Boot 3.5.x / Java 21 (LTS)** | Se mantiene; versión con soporte |
+| Backend | Spring Boot 3.2.5 | **Spring Boot 4.1.x / Java 21 (LTS)** | Se mantiene el framework; se salta a la línea actual (ver [ADR-0001](adr/0001-stack-tecnologico.md)) |
 | Build | Maven | **Maven** (o Gradle si prefieres) | Maven ya lo dominas; no es donde está el valor |
 | Mapeo | manual + Lombok `@Data` en entidades | **MapStruct** + Lombok acotado | `@Data` en entidades JPA rompe `equals/hashCode` |
-| Docs API | markdown a mano | **springdoc-openapi 2** | Contrato ejecutable |
+| Docs API | markdown a mano | **springdoc-openapi** (línea compatible con Boot 4) | Contrato ejecutable |
 | Errores | JSON ad-hoc | **RFC 9457 `ProblemDetail`** | Estándar, ya nativo en Spring 6 |
 | Tests | JUnit5 + H2 | **JUnit5 + Testcontainers + RestAssured/MockMvc** | Fidelidad con prod |
 | Auth | JWT RS256 + refresh en BD | **igual** (+ rotación y familia de tokens) | Ya estaba bien resuelto |
@@ -108,6 +108,19 @@ y es lo que se debe repetir en v2):
 
 **Lo que NO cambia**: PostgreSQL, Spring Boot, Java, el dominio sanitario y el nivel de
 exigencia RGPD. Todo lo demás se sustituye por la opción que un equipo elegiría hoy.
+
+> **Nota sobre Spring Boot 4.** El esqueleto se generó con **4.1.1** y esa es la versión
+> fijada en el [ADR-0001](adr/0001-stack-tecnologico.md). Frente a la línea 3.x cambian
+> algunos nombres de artefactos que aparecen en los ejemplos de esta guía:
+>
+> | 3.x | 4.x |
+> |---|---|
+> | `spring-boot-starter-web` | `spring-boot-starter-webmvc` |
+> | `spring-boot-starter-test` (monolítico) | starters de test modulares: `spring-boot-starter-<módulo>-test` |
+>
+> El diseño que describe la guía (modelo de datos, cifrado, outbox, package-by-feature,
+> pirámide de tests) no depende de la versión. Cuando un ejemplo de código necesite un
+> ajuste de sintaxis para 4.x, se corrige aquí al llegar a esa fase.
 
 ---
 
@@ -685,7 +698,7 @@ entre "hago el back y luego veo qué necesita el front" y trabajar como un equip
 <dependency>
   <groupId>org.springdoc</groupId>
   <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
-  <version>2.6.0</version>
+  <version>${springdoc.version}</version>   <!-- fijar la línea compatible con Boot 4 -->
 </dependency>
 ```
 

@@ -1,4 +1,4 @@
-# ADR-0000: Título de la decisión
+# ADR-0000: Stack tecnológico y decisiones de arquitectura
 
 ## Estado
 

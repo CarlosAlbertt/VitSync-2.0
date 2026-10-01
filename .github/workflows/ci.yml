@@ -1,0 +1,62 @@
+name: ci
+
+# CI mínima del Sprint 0: que el backend compile y que sus tests pasen contra un
+# PostgreSQL real, más escaneo de secretos.
+#
+# El pipeline completo (Spotless, dependency-check, JaCoCo, drift de OpenAPI y el job
+# del frontend) entra en la Fase 11 de docs/GUIA_CONSTRUCCION.md, según existan las
+# herramientas en el proyecto. Añadir aquí pasos que todavía no tienen configuración
+# solo produce una CI roja que se acaba ignorando.
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+# Un PR que recibe varios push cancela las ejecuciones anteriores.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  api:
+    name: api (build + tests)
+    runs-on: ubuntu-latest
+    # Los runners de GitHub traen Docker, que es requisito de Testcontainers (ADR-0008).
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+
+      # verify ejecuta los tests de integración, que levantan postgres:16-alpine
+      # con Testcontainers y aplican las migraciones de Flyway desde cero.
+      - name: mvnw verify
+        working-directory: apps/api
+        run: ./mvnw -B verify
+
+      - name: Publicar informes de test
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: surefire-reports
+          path: apps/api/target/surefire-reports/
+          retention-days: 7
+
+  secrets:
+    name: escaneo de secretos
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # gitleaks necesita el historial completo
+
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

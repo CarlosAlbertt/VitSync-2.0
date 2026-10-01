@@ -1,0 +1,61 @@
+# Entorno de desarrollo local de VitSync 2.0 (guía, Fase 2.1).
+# Uso: docker compose up -d
+#
+# Estos servicios sustituyen a Neon, S3 y al proveedor de correo durante el desarrollo:
+# nada de lo que se ejecuta en local depende de internet ni de una cuenta externa.
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: vitsync-db
+    environment:
+      POSTGRES_DB: vitsync
+      POSTGRES_USER: vitsync
+      POSTGRES_PASSWORD: vitsync
+    # Si ya tienes un PostgreSQL en el 5432, exporta DB_PORT (p. ej. DB_PORT=5433).
+    ports: ["${DB_PORT:-5432}:5432"]
+    volumes: ["dbdata:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vitsync -d vitsync"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # S3 local. La consola queda en http://localhost:9001 (minio / minio12345).
+  minio:
+    image: quay.io/minio/minio
+    container_name: vitsync-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minio
+      MINIO_ROOT_PASSWORD: minio12345
+    ports: ["9000:9000", "9001:9001"]
+    volumes: ["miniodata:/data"]
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Crea el bucket al arrancar para que la API no tenga que hacerlo en caliente.
+  minio-init:
+    image: quay.io/minio/mc
+    container_name: vitsync-minio-init
+    depends_on:
+      minio: { condition: service_healthy }
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 minio minio12345 &&
+      mc mb --ignore-existing local/vitsync-dev &&
+      echo 'bucket vitsync-dev listo'
+      "
+
+  # Captura todo el correo saliente. Bandeja en http://localhost:8025
+  mailpit:
+    image: axllent/mailpit
+    container_name: vitsync-mailpit
+    ports: ["1025:1025", "8025:8025"]
+
+volumes:
+  dbdata: {}
+  miniodata: {}

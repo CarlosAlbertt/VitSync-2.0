@@ -27,3 +27,25 @@ Thumbs.db
 # Datos locales
 uploads/
 docker/data/
+
+# IDEs (Eclipse/STS, NetBeans)
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+*.iml
+*.iws
+*.ipr
+/nbproject/private/
+/nbbuild/
+/nbdist/
+/.nb-gradle/
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+# Spring Initializr
+HELP.md
