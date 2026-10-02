@@ -28,10 +28,6 @@ jobs:
     # Los runners de GitHub traen Docker, que es requisito de Testcontainers (ADR-0008).
     steps:
       - uses: actions/checkout@v4
-        
-      - name: Make mvnw executable
-        working-directory: apps/api
-        run: chmod +x mvnw
 
       - uses: actions/setup-java@v4
         with:
