@@ -32,6 +32,10 @@ jobs:
       - name: Make mvnw executable
         working-directory: apps/api
         run: chmod +x mvnw
+        
+      - name: Make mvnw executable
+        working-directory: apps/api
+        run: chmod +x mvnw
 
       - uses: actions/setup-java@v4
         with:
