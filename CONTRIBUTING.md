@@ -37,7 +37,7 @@ Servicios locales:
 | Servicio | URL | Credenciales |
 |---|---|---|
 | API | http://localhost:8080 | — |
-| PostgreSQL | `localhost:5432/vitsync` | `vitsync` / `vitsync` |
+| PostgreSQL | `localhost:5433/vitsync` | `vitsync` / `vitsync` |
 | MinIO (consola) | http://localhost:9001 | `minio` / `minio12345` |
 | Mailpit (bandeja) | http://localhost:8025 | — |
 
@@ -45,22 +45,23 @@ Esas credenciales son de desarrollo y son públicas a propósito. **Ningún secr
 en el repositorio**; gitleaks lo comprueba en CI. v1 llegó a tener credenciales en el
 historial de git: no se repite.
 
-### Si ya tienes un PostgreSQL en el 5432
+### Por qué el 5433 y no el 5432
 
-El contenedor y tu PostgreSQL local no pueden compartir puerto, y el síntoma es confuso:
-la conexión llega a tu instancia local y falla con
-`password authentication failed for user "vitsync"`.
+Porque un PostgreSQL instalado en la máquina ocupa el 5432, y el contenedor no puede
+compartirlo. El síntoma es confuso: la conexión llega a la instancia local, no al
+contenedor, y falla con `password authentication failed for user "vitsync"`.
 
-No hace falta parar tu servicio ni editar ficheros versionados: el puerto del host es una
-variable.
+Publicando el contenedor en el **5433** no hay que parar ningún servicio ni exportar nada:
+`docker compose up -d` y `./mvnw spring-boot:run -Dspring-boot.run.profiles=local` funcionan
+tal cual. Dentro de la red de compose el puerto sigue siendo el 5432.
+
+Si el 5433 también te estorba, los dos ficheros leen la misma variable:
 
 ```bash
-export DB_PORT=5433            # PowerShell: $env:DB_PORT = "5433"
+export DB_PORT=5544            # PowerShell: $env:DB_PORT = "5544"
 docker compose up -d
 cd apps/api && ./mvnw spring-boot:run -Dspring-boot.run.profiles=local
 ```
-
-`docker-compose.yml` y el perfil `local` leen ambos `DB_PORT`, con 5432 por defecto.
 
 ## 3. Idioma
 
@@ -100,12 +101,11 @@ force-push.
 
 ## 5. Estilo de código
 
-**Java** — Google Java Format vía Spotless:
-
-```bash
-./mvnw spotless:apply     # formatea
-./mvnw spotless:check     # lo que ejecuta la CI
-```
+**Java** — Google Java Format vía Spotless. **Todavía no está configurado**: el plugin
+entra en la Fase 11 junto con el resto del pipeline de calidad, y hasta entonces
+`./mvnw spotless:apply` / `spotless:check` no existen como objetivos del proyecto ni los
+ejecuta la CI. El día que se añada el plugin, el primer commit será el reformateo completo,
+aparte de cualquier cambio funcional.
 
 **TypeScript** (desde la Fase 9) — ESLint + Prettier, `strict: true`, y nada de `any` sin un
 comentario que justifique por qué.

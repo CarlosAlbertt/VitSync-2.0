@@ -12,8 +12,11 @@ services:
       POSTGRES_DB: vitsync
       POSTGRES_USER: vitsync
       POSTGRES_PASSWORD: vitsync
-    # Si ya tienes un PostgreSQL en el 5432, exporta DB_PORT (p. ej. DB_PORT=5433).
-    ports: ["${DB_PORT:-5432}:5432"]
+    # 5433 en el host a propósito: un PostgreSQL instalado en la máquina ocupa el 5432
+    # y el síntoma engaña (la conexión llega a esa instancia y falla con
+    # "password authentication failed for user vitsync"). Dentro de la red de compose
+    # el puerto sigue siendo el 5432. Para usar otro, exporta DB_PORT.
+    ports: ["${DB_PORT:-5433}:5432"]
     volumes: ["dbdata:/var/lib/postgresql/data"]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U vitsync -d vitsync"]

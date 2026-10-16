@@ -40,8 +40,9 @@ cd apps/api && ./mvnw spring-boot:run -Dspring-boot.run.profiles=local
 curl http://localhost:8080/actuator/health                  # → {"status":"UP"}
 ```
 
-Detalle completo, y qué hacer si ya tienes un PostgreSQL en el 5432, en
-[CONTRIBUTING.md](CONTRIBUTING.md).
+Sin variables de entorno: el perfil `local` ya apunta al compose. PostgreSQL se publica en
+el **5433** del host para no chocar con un PostgreSQL instalado en la máquina. Detalle
+completo en [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ---
 
@@ -82,6 +83,7 @@ vitsync-2.0/
 │   ├── SCOPE.md               MVP, v2.1 y fuera de alcance
 │   ├── DUDAS_Y_CAMBIOS.md     Cambios estructurales y dudas abiertas
 │   ├── JIRA_SETUP.md          Conexión con Jira y volcado del backlog
+│   ├── VADEMECUM.md           Glosario técnico (193 términos)
 │   ├── adr/                   Architecture Decision Records (0001–0008)
 │   └── openapi.json           Contrato generado (aparecerá en la Fase 3)
 ├── scripts/jira/     Bootstrap del backlog en Jira
