@@ -75,7 +75,7 @@ pasa con 9 tests. Siguiente: la estructura de módulos (paso 3).
 | D10 | Contrato **OpenAPI primero**; el cliente TS del front se genera de la spec | Evita el drift front/back de v1 |
 | D11 | Estado de servidor en el front con **TanStack Query**; Zustand solo para UI | v1 tenía stores caseros |
 | D12 | Idioma: código, BD, ramas y commits en **inglés**; UI y textos en español | v1 mezclaba y lo parcheaba con anotaciones |
-| D13 | Trunk-based: `main` protegida, ramas cortas, squash merge, CI verde obligatoria | |
+| D13 | Trunk-based: `master` protegida, ramas cortas, squash merge, CI verde obligatoria | La rama por defecto del repo es `master`, no `main` |
 
 ---
 
@@ -138,7 +138,7 @@ Actúa como jefe de proyecto: propón el plan del sprint antes de escribir códi
 Reglas de trabajo acordadas:
 - Nada se mergea sin cumplir la Definition of Done (guía, Anexo A).
 - Ninguna migración Flyway se edita después de mergearse: se corrige con otra nueva.
-- Cero cambios "temporales" en `main` (fue el error visible de v1).
+- Cero cambios "temporales" en `master` (fue el error visible de v1).
 - Cada decisión discutible se cierra con un ADR, no con un mensaje de chat.
 
 ---

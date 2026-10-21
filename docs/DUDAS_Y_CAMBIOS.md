@@ -100,6 +100,125 @@ Hoy `paths` está vacío: no hay endpoints todavía.
 
 ---
 
+## 2026-10-01 — Auditoría de configuración del repositorio
+
+### Contexto
+
+Revisión del repositorio tal y como está, buscando configuración o estructura incorrecta: no
+se añadió funcionalidad, solo se comprobó que lo que los documentos afirman se cumple de
+verdad al ejecutarlo. Salieron seis cosas, una de ellas bloqueante para la CI.
+
+### 1. `apps/api/mvnw` estaba versionado sin permiso de ejecución — CI rota
+
+**El fallo.** El fichero estaba en el índice de git como `100644`. El job `api` del workflow
+ejecuta `./mvnw -B verify` en un runner Ubuntu, y ahí eso termina en
+`./mvnw: Permission denied`: la CI habría fallado en su primera ejecución, antes de compilar
+nada. No se había visto porque en Windows `git config core.fileMode` es `false` y el wrapper
+se invoca a través de `mvnw.cmd`.
+
+**La corrección.** `git update-index --chmod=+x apps/api/mvnw`; el fichero queda como
+`100755`. Es un cambio en el índice, no en el contenido.
+
+Esto bloqueaba también Q10: la protección de `master` se iba a configurar "una vez la CI haya
+corrido al menos una vez", y la CI no podía pasar.
+
+### 2. El arranque en local no funcionaba con lo que dice el README
+
+**El fallo.** `docker compose up -d && ./mvnw spring-boot:run -Dspring-boot.run.profiles=local`
+reventaba con `FATAL: password authentication failed for user "vitsync"`. Es Q8, que estaba
+anotada como "mitigada" pero cuya mitigación era manual: exportar `DB_PORT` en cada shell.
+Lo que pasa por debajo, comprobado con `Get-NetTCPConnection`:
+
+| Proceso | Escucha en |
+|---|---|
+| `postgres` nativo (servicio de Windows) | `0.0.0.0:5432` |
+| `com.docker.backend` (el contenedor) | `[::]:5432` |
+
+Los dos arrancan sin error —cada uno coge una familia de direcciones— pero el driver JDBC
+resuelve `localhost` a IPv4 primero y acaba hablando con el PostgreSQL nativo, que no conoce
+al usuario `vitsync`. El síntoma parece un problema de credenciales y es un problema de
+puerto.
+
+**La corrección.** El puerto publicado por defecto pasa a ser el **5433** en
+`docker-compose.yml` y en el perfil `local`, que siguen leyendo `DB_PORT` para quien
+necesite otro. Dentro de la red de compose nada cambia: el contenedor sigue en el 5432. Con
+esto el arranque documentado funciona sin exportar nada. **Q8 queda cerrada.**
+
+### 3. `CONTRIBUTING.md` documentaba un comando que no existe
+
+El apartado de estilo presentaba `./mvnw spotless:apply` y `spotless:check` como el formateo
+del proyecto y "lo que ejecuta la CI". No hay plugin de Spotless en el `pom.xml` ni paso de
+Spotless en el workflow: los dos comandos fallan. Reescrito para decir lo que es verdad —que
+el plugin entra en la Fase 11 con el resto del pipeline de calidad— en lugar de añadirlo
+ahora, que es justo lo que el propio `ci.yml` razona que no hay que hacer.
+
+### 4. `main` / `master`
+
+La rama por defecto del repositorio es `master`, y es la que dispara la CI. El HANDOFF (D13)
+y la guía hablaban de `main` en las reglas de protección de rama: seguir esas instrucciones
+al pie de la letra protege una rama que no existe. Corregido en el HANDOFF; en la guía se
+añade una nota en 0.3, porque es el documento de plan y se mantiene como se escribió.
+
+### 5. Dos omisiones menores
+
+- `docs/VADEMECUM.md` estaba en la tabla de documentación del README pero no en el árbol del
+  repositorio. Añadido.
+- `DB_PORT` lo leen `docker-compose.yml` y el perfil `local`, pero no aparecía en
+  `.env.example`, que es el contrato de variables. Añadido en una sección aparte, marcado
+  como de desarrollo (docker compose carga `.env` automáticamente).
+
+### Inventario de ficheros
+
+Todo modificado; ninguno creado ni borrado.
+
+| Fichero | Cambio |
+|---|---|
+| `apps/api/mvnw` | Modo `100644` → `100755` en el índice de git (contenido intacto) |
+| `docker-compose.yml` | Puerto del host de `db`: `${DB_PORT:-5432}` → `${DB_PORT:-5433}`, con el porqué en el comentario |
+| `apps/api/src/main/resources/application-local.properties` | `${DB_PORT:5432}` → `${DB_PORT:5433}` en la URL de JDBC |
+| `.env.example` | Sección "Desarrollo local" con `DB_PORT` |
+| `CONTRIBUTING.md` | Spotless marcado como no configurado; tabla de servicios al 5433; sección del choque de puertos reescrita |
+| `README.md` | Nota del 5433 en "Arrancar en local"; `VADEMECUM.md` en el árbol del repo |
+| `docs/HANDOFF.md` | D13 y §6: `main` → `master` |
+| `docs/GUIA_CONSTRUCCION.md` | Nota en 0.3: la rama real es `master` |
+
+### Lo que se revisó y está bien
+
+Para no volver a mirarlo: el `pom.xml` (los starters de Boot 4 y el BOM de Testcontainers
+resuelven), el DDL de `V1` (19 tablas, el orden de las FK resuelve), `.gitignore` (ni
+`target/` ni `.idea/` están versionados), los enlaces relativos de los 16 ficheros Markdown
+(ninguno roto), `scripts/jira/bootstrap.mjs` (`--dry-run` imprime las 9 épicas) y el
+healthcheck de Mailpit, que no está en el compose porque lo trae la propia imagen: el
+contenedor aparece `healthy`, así que la afirmación de "healthcheck en los tres" se sostiene.
+
+### Lo que sigue mal y no se ha tocado
+
+- **Q5, `.idea/`**: el proyecto está abierto en IntelliJ como módulo Java plano, no como
+  proyecto Maven, y con `languageLevel="JDK_25"` contra un proyecto de Java 21. De ahí los
+  errores en el editor. No se arregla desde fuera —hay que reimportar `apps/api/pom.xml`
+  como proyecto Maven— y no afecta al repositorio, porque `.idea/` está ignorado.
+- **Q7, licencia**: sigue sin fichero `LICENSE`.
+- **Docker Desktop estaba parado** al empezar la sesión, y por eso `./mvnw verify` fallaba
+  con `Could not find a valid Docker environment`. No es un problema del repositorio, pero
+  el mensaje de Testcontainers no ayuda: conviene descartarlo antes de buscar la causa en
+  otro sitio.
+
+### Verificación
+
+Ejecutado, no solo escrito. Con Docker Desktop arrancado:
+
+| Comprobación | Resultado |
+|---|---|
+| `./mvnw -B verify` | **verde** — 1 test, 37 s, Flyway aplica V1 sobre `postgres:16-alpine` desde cero |
+| `docker compose up -d` | `db`, `minio` y `mailpit` los tres `healthy`; `db` publicado en `0.0.0.0:5433->5432` |
+| `./mvnw spring-boot:run -Dspring-boot.run.profiles=local` | arranca en 7,0 s **sin exportar `DB_PORT`** (antes de la corrección: `password authentication failed`) |
+| `GET /actuator/health` | `HTTP 200`, con `db` y `mail` en `UP` |
+| `flyway_schema_history` | V1 aplicada con `success = t`; 20 tablas en `public` |
+| `node scripts/jira/bootstrap.mjs --dry-run` | las 9 épicas con sus historias |
+| `git ls-files -s apps/api/mvnw` | `100755` |
+
+---
+
 ## 2026-09-12 — Cierre del Sprint 0
 
 ### Contexto
@@ -345,7 +464,6 @@ VitSync-2.0/
 
 | # | Duda | Estado | Notas |
 |---|---|---|---|
-| Q8 | **Colisión en el puerto 5432** | Mitigada | Esta máquina tiene un PostgreSQL instalado escuchando en el 5432 además del contenedor. El síntoma engaña: la conexión llega al PostgreSQL local y falla con `password authentication failed for user "vitsync"`. En vez de parar el servicio, el puerto del host es ahora la variable `DB_PORT` (5432 por defecto), que leen tanto `docker-compose.yml` como el perfil `local`. Documentado en [CONTRIBUTING](../CONTRIBUTING.md#si-ya-tienes-un-postgresql-en-el-5432). |
 | Q3 | **`apps/web/` no existe** | Pendiente | Corresponde a la Fase 9. La estructura ya reserva el hueco, y el job `web` de la CI se añadirá con él. |
 | Q5 | **IntelliJ apunta al módulo antiguo** | Acción manual | `.idea/` referencia la ruta anterior. Recargar abriendo `apps/api/pom.xml` como proyecto Maven (o *File → Invalidate Caches*). No afecta al repo: `.idea/` está ignorado. |
 | Q7 | **Licencia** | Abierta | MIT previsto, sin decidir. Mientras no exista el fichero `LICENSE`, el repositorio es legalmente "todos los derechos reservados" aunque esté público. Es lo único del Sprint 0 que sigue sin cerrar. |
@@ -361,3 +479,5 @@ VitSync-2.0/
 | Q2 | `./mvnw verify` no pasaba | **Resuelta**: Testcontainers 1.21.4 + `@ServiceConnection`; verify en verde · 2026-09-12 |
 | Q4 | `docker-compose.yml` no existía | **Resuelta**: creado y verificado con los tres servicios `healthy` · 2026-09-12 |
 | Q6 | Monorepo vs dos repos | **Monorepo** — [ADR-0002](adr/0002-monorepo-frente-a-dos-repositorios.md) · 2026-09-12 |
+| Q8 | Colisión en el puerto 5432 | **Resuelta**: el contenedor se publica en el 5433 por defecto (`DB_PORT` para cambiarlo); el arranque documentado funciona sin exportar nada · 2026-10-01 |
+| Q11 | `./mvnw` versionado sin permiso de ejecución | **Resuelta**: `100755` en el índice; desbloquea la primera ejecución de la CI y con ella Q10 · 2026-10-01 |
