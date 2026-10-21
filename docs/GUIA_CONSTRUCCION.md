@@ -201,6 +201,10 @@ chore/VIT-40-bump-spring
 Reglas de protección de `main`: PR obligatorio, 1 revisión, CI verde, historial lineal
 (squash merge), sin force-push.
 
+> **En este repositorio la rama por defecto es `master`**, no `main`: es la que creó GitHub
+> y la que dispara la CI (`.github/workflows/ci.yml`). Donde esta guía diga `main`, léase
+> `master`.
+
 ### 0.4 Convenciones (escritas, no implícitas)
 
 `CONTRIBUTING.md`:
