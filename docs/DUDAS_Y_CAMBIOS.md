@@ -6,6 +6,100 @@
 
 ---
 
+## 2026-10-21 — Contrato de API: errores RFC 9457 y OpenAPI versionado
+
+### Contexto
+
+Punto 2 del "siguiente paso concreto" del [HANDOFF](HANDOFF.md): contrato antes que código
+(guía, Fase 3). Faltaban springdoc, el formato único de error y una forma de que el
+contrato quedara versionado y vigilado en CI. Rama `feat/api-contract-foundation`.
+
+### Decisión: springdoc 3.1.1
+
+Cierra el único "a vigilar" del [ADR-0001](adr/0001-stack-tecnologico.md). La línea 2.x de
+springdoc es la de Boot 3; la 3.x es la de Boot 4 / Spring Framework 7. Se fija **3.1.1**
+porque su POM padre se construye contra **Spring Boot 4.1.0**, la misma línea que el
+proyecto (4.1.1). Boot no gestiona su versión: va como propiedad `springdoc.version` en el
+`pom.xml`.
+
+### Cambios realizados
+
+**1. Formato único de error (RFC 9457)** — paquete `com.vitsync.common.error`
+
+Toda respuesta de error es `application/problem+json` con los campos estándar y dos
+extensiones propias:
+
+| Campo | Para qué |
+|---|---|
+| `code` | Nombre de la constante de `ErrorCode`. Es contrato: el front decide por él, no por el texto |
+| `traceId` | Id de la petición, el mismo que aparece en los logs |
+
+- `ErrorCode`: catálogo con estado HTTP, título y detalle. Solo los transversales
+  (`VALIDATION_FAILED`, `MALFORMED_REQUEST`, `UNAUTHENTICATED`, `ACCESS_DENIED`,
+  `RESOURCE_NOT_FOUND`, `INTERNAL_ERROR`); los de cada funcionalidad entran con ella.
+- `BusinessException`: lo que lanzan los servicios cuando se incumple una regla.
+- `GlobalExceptionHandler`: punto único de traducción excepción → respuesta. Cubre también
+  los errores del propio Spring (404, 405, JSON ilegible…) para que todo error tenga la
+  misma forma. **El mensaje de una excepción no llega nunca al cliente** (fuga V15 de v1);
+  un 500 devuelve un texto genérico y la traza completa va al log.
+- `type` de cada error: `https://api.vitsync.es/errors/<code-en-kebab-case>`.
+
+**2. Trazabilidad por petición** — `com.vitsync.common.web.TraceIdFilter`
+
+Primer filtro de la cadena, antes que la seguridad, para que también los 401 lleven traza.
+Respeta un `X-Request-Id` entrante si es válido (`[A-Za-z0-9-]{8,64}`, para evitar inyección
+en logs) o genera uno; lo devuelve en la cabecera y lo deja en el MDC. El patrón de log lo
+imprime en cada línea (`logging.pattern.correlation`).
+
+**3. Seguridad base** — `com.vitsync.common.config.SecurityConfig`
+
+Cerrado por defecto: solo son públicos `/actuator/health/**`, `/v3/api-docs/**` y Swagger
+UI. API sin estado, sin CSRF, formulario, HTTP Basic ni logout. Los 401 y 403 se delegan en
+`GlobalExceptionHandler`, así que tienen el mismo formato. `@EnableMethodSecurity` activa
+`@PreAuthorize`. Todavía no hay login: llega con la primera slice.
+
+**4. OpenAPI** — `com.vitsync.common.config.OpenApiConfig`
+
+Título, versión, servidor relativo (`/`, para que la spec no dependa del host) y esquema
+`bearerAuth` (JWT) aplicado por defecto. `/v3/api-docs` y Swagger UI están **apagados por
+defecto** y se encienden en el perfil `local` y en los tests.
+
+**5. Contrato versionado y vigilado** — `docs/openapi.json` + `OpenApiContractTest`
+
+El test genera la spec y la compara, como árbol JSON, con el fichero versionado. Si
+difieren, falla. Corre dentro de `./mvnw verify`, así que **la CI ya detecta el drift sin
+tocar el workflow**. Para regenerar el fichero tras un cambio de API:
+
+```bash
+./mvnw verify -Dopenapi.update=true
+```
+
+Hoy `paths` está vacío: no hay endpoints todavía.
+
+**6. Paginación por defecto**
+
+`spring.data.web.pageable.default-page-size=20` y `max-page-size=100`.
+
+### Tests
+
+| Test | Qué protege |
+|---|---|
+| `ProblemDetailContractTest` (7, `@WebMvcTest`, sin Docker) | 401, 403, regla de negocio, validación con lista de campos, 500 sin fuga de mensaje, errores del framework con `code`, eco de `X-Request-Id` |
+| `OpenApiContractTest` (Testcontainers) | Que `docs/openapi.json` coincide con el código |
+| `VitSyncApplicationTests` | Migraciones y mapeo contra PostgreSQL real (sin cambios) |
+
+`./mvnw verify` → **9 tests en verde**.
+
+### Dejado fuera a propósito
+
+- **Endpoints del MVP como stubs 501** (entregable de la Fase 3 en la guía): tienen más
+  sentido cuando exista la estructura de módulos (Fase 4, siguiente paso).
+- **Esquema `Problem` documentado en cada operación del OpenAPI**: sin endpoints no hay
+  dónde colgarlo; entra con el primero.
+- **Versionado nativo de Spring Framework 7**: ver Q11.
+
+---
+
 ## 2026-09-12 — Cierre del Sprint 0
 
 ### Contexto
@@ -257,6 +351,7 @@ VitSync-2.0/
 | Q7 | **Licencia** | Abierta | MIT previsto, sin decidir. Mientras no exista el fichero `LICENSE`, el repositorio es legalmente "todos los derechos reservados" aunque esté público. Es lo único del Sprint 0 que sigue sin cerrar. |
 | Q9 | **Tablero de Jira sin montar** | Pendiente | [JIRA_SETUP.md](JIRA_SETUP.md) y `scripts/jira/backlog.json` están listos; falta ejecutarlo. Es una acción manual con credenciales, no automatizable desde aquí. |
 | Q10 | **Protección de `master` sin configurar** | Pendiente | PR obligatorio, CI verde y squash merge. Se configura en GitHub una vez la CI haya corrido al menos una vez. |
+| Q11 | **Versionado de API: prefijo `/api/v1` o el nativo de Spring Framework 7** | Abierta | El [ADR-0001](adr/0001-stack-tecnologico.md) cita el versionado nativo como ventaja de Boot 4. No se adopta todavía: resolver la versión por segmento de ruta se aplica a todas las peticiones, y rutas como `/v3/api-docs` (donde `v3` parece una versión) o `/actuator/health` pueden chocar. Mientras tanto, cada controlador declara `/api/v1/...` en su `@RequestMapping`. Se decide al crear el primer controlador real. |
 
 ## Dudas resueltas
 

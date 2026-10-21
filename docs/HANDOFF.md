@@ -2,7 +2,7 @@
 
 > Documento de retoma. Léelo entero antes de tocar nada: en 5 minutos sabes dónde está
 > el proyecto, qué está decidido y cuál es el siguiente paso concreto.
-> Última actualización: **2026-09-12**.
+> Última actualización: **2026-10-21**.
 
 ---
 
@@ -18,10 +18,11 @@ el proceso completo de ingeniería que se sigue en una empresa, no solo el produ
 
 ---
 
-## 2. Estado actual (2026-09-12)
+## 2. Estado actual (2026-10-21)
 
-**Sprint 0 cerrado.** El criterio que fijaba este documento se cumple: en la máquina,
-`docker compose up -d && ./mvnw verify` pasa en verde y `/actuator/health` responde `UP`.
+**Sprint 1 en curso.** Hecho el contrato de API (paso 2 del §5): errores RFC 9457, traza
+por petición, seguridad base y `docs/openapi.json` vigilado por un test. `./mvnw verify`
+pasa con 9 tests. Siguiente: la estructura de módulos (paso 3).
 
 ### Hecho
 - Análisis completo de los dos repos de v1 (código, no solo README).
@@ -41,15 +42,20 @@ el proceso completo de ingeniería que se sigue en una empresa, no solo el produ
 - **CI mínima** en GitHub Actions: build + tests + gitleaks.
 - **Convenciones escritas**: [CONTRIBUTING.md](../CONTRIBUTING.md), plantilla de PR con la
   Definition of Done, `Makefile` y `.env.example`.
+- **Contrato de API (Sprint 1)**: springdoc 3.1.1 (línea de Boot 4), formato único de
+  error RFC 9457 con `code` y `traceId`, `X-Request-Id` en cada respuesta, seguridad
+  cerrada por defecto y `docs/openapi.json` comparado con el código en cada `verify`.
+  Detalle en [DUDAS_Y_CAMBIOS](DUDAS_Y_CAMBIOS.md) (2026-10-21).
 
 ### No hecho todavía
-- **Cero código de producto**: `apps/api` tiene el esqueleto y la configuración, ninguna
-  entidad ni endpoint. No existe `apps/web` (Fase 9).
+- **Sin código de dominio**: `apps/api` tiene la base transversal (`common/`: errores,
+  seguridad, OpenAPI, traza) pero ninguna entidad ni endpoint de negocio. No existe
+  `apps/web` (Fase 9).
 - Sin tablero de Jira (guía lista en [JIRA_SETUP.md](JIRA_SETUP.md), falta ejecutarla).
 - `master` sin reglas de protección configuradas en GitHub.
 - Sin licencia (ver [DUDAS_Y_CAMBIOS](DUDAS_Y_CAMBIOS.md), Q7).
-- La CI no comprueba aún formato, cobertura, vulnerabilidades de dependencias ni drift de
-  OpenAPI: esas herramientas entran en la Fase 11, según se configuren en el proyecto.
+- La CI no comprueba aún formato, cobertura ni vulnerabilidades de dependencias: esas
+  herramientas entran en la Fase 11. El drift de OpenAPI ya lo detecta `OpenApiContractTest`.
 
 ---
 
@@ -99,9 +105,10 @@ El Sprint 0 está cerrado. **Sprint 1 — Autenticación**, en este orden:
      `scripts/jira/backlog.json` (9 épicas, con criterios de aceptación).
    - Configurar la protección de `master` en GitHub: PR obligatorio, CI verde,
      historial lineal, sin force-push.
-2. **Contrato antes que código** (guía, Fase 3): añadir springdoc — fijando la línea
-   compatible con Boot 4, que es lo único a verificar del [ADR-0001](adr/0001-stack-tecnologico.md) —,
-   las convenciones REST y el manejo central de errores con `ProblemDetail` (RFC 9457).
+2. ~~**Contrato antes que código** (guía, Fase 3)~~ — **hecho el 2026-10-21**: springdoc
+   3.1.1, `ProblemDetail` (RFC 9457) con `code` y `traceId`, y `docs/openapi.json`
+   versionado. Queda abierta la forma de versionar la API (Q11 en
+   [DUDAS_Y_CAMBIOS](DUDAS_Y_CAMBIOS.md)), que se decide con el primer controlador.
 3. **Estructura del backend** (guía, Fase 4): package-by-feature bajo `com.vitsync`, con el
    test de ArchUnit que impide que un módulo importe los internos de otro.
 4. **Primera vertical slice: registro y login.** Entidad `User` sin herencia

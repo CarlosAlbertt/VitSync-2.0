@@ -1,0 +1,24 @@
+{
+  "openapi" : "3.1.0",
+  "info" : {
+    "description" : "Errors follow RFC 9457 with the extensions `code` and `traceId`.",
+    "title" : "VitSync API",
+    "version" : "1.0"
+  },
+  "servers" : [ {
+    "url" : "/"
+  } ],
+  "security" : [ {
+    "bearerAuth" : [ ]
+  } ],
+  "paths" : { },
+  "components" : {
+    "securitySchemes" : {
+      "bearerAuth" : {
+        "bearerFormat" : "JWT",
+        "scheme" : "bearer",
+        "type" : "http"
+      }
+    }
+  }
+}
