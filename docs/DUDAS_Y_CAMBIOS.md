@@ -96,7 +96,7 @@ Hoy `paths` está vacío: no hay endpoints todavía.
   sentido cuando exista la estructura de módulos (Fase 4, siguiente paso).
 - **Esquema `Problem` documentado en cada operación del OpenAPI**: sin endpoints no hay
   dónde colgarlo; entra con el primero.
-- **Versionado nativo de Spring Framework 7**: ver Q11.
+- **Versionado nativo de Spring Framework 7**: ver Q12.
 
 ---
 
@@ -469,7 +469,7 @@ VitSync-2.0/
 | Q7 | **Licencia** | Abierta | MIT previsto, sin decidir. Mientras no exista el fichero `LICENSE`, el repositorio es legalmente "todos los derechos reservados" aunque esté público. Es lo único del Sprint 0 que sigue sin cerrar. |
 | Q9 | **Tablero de Jira sin montar** | Pendiente | [JIRA_SETUP.md](JIRA_SETUP.md) y `scripts/jira/backlog.json` están listos; falta ejecutarlo. Es una acción manual con credenciales, no automatizable desde aquí. |
 | Q10 | **Protección de `master` sin configurar** | Pendiente | PR obligatorio, CI verde y squash merge. Se configura en GitHub una vez la CI haya corrido al menos una vez. |
-| Q11 | **Versionado de API: prefijo `/api/v1` o el nativo de Spring Framework 7** | Abierta | El [ADR-0001](adr/0001-stack-tecnologico.md) cita el versionado nativo como ventaja de Boot 4. No se adopta todavía: resolver la versión por segmento de ruta se aplica a todas las peticiones, y rutas como `/v3/api-docs` (donde `v3` parece una versión) o `/actuator/health` pueden chocar. Mientras tanto, cada controlador declara `/api/v1/...` en su `@RequestMapping`. Se decide al crear el primer controlador real. |
+| Q12 | **Versionado de API: prefijo `/api/v1` o el nativo de Spring Framework 7** | Abierta | El [ADR-0001](adr/0001-stack-tecnologico.md) cita el versionado nativo como ventaja de Boot 4. No se adopta todavía: resolver la versión por segmento de ruta se aplica a todas las peticiones, y rutas como `/v3/api-docs` (donde `v3` parece una versión) o `/actuator/health` pueden chocar. Mientras tanto, cada controlador declara `/api/v1/...` en su `@RequestMapping`. Se decide al crear el primer controlador real. |
 
 ## Dudas resueltas
 

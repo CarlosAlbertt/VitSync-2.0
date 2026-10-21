@@ -107,7 +107,7 @@ El Sprint 0 está cerrado. **Sprint 1 — Autenticación**, en este orden:
      historial lineal, sin force-push.
 2. ~~**Contrato antes que código** (guía, Fase 3)~~ — **hecho el 2026-10-21**: springdoc
    3.1.1, `ProblemDetail` (RFC 9457) con `code` y `traceId`, y `docs/openapi.json`
-   versionado. Queda abierta la forma de versionar la API (Q11 en
+   versionado. Queda abierta la forma de versionar la API (Q12 en
    [DUDAS_Y_CAMBIOS](DUDAS_Y_CAMBIOS.md)), que se decide con el primer controlador.
 3. **Estructura del backend** (guía, Fase 4): package-by-feature bajo `com.vitsync`, con el
    test de ArchUnit que impide que un módulo importe los internos de otro.
