@@ -20,9 +20,9 @@ el proceso completo de ingeniería que se sigue en una empresa, no solo el produ
 
 ## 2. Estado actual (2026-10-22)
 
-**Sprint 1 en curso.** Hechos el contrato de API (paso 2 del §5) y la estructura de
-módulos con sus reglas de arquitectura (paso 3). `./mvnw verify` pasa con 19 tests.
-Siguiente: la primera slice, registro y login (paso 4).
+**Sprint 1 en curso.** Hechos el contrato de API y la estructura de módulos (19 tests en
+verde). Alcance del sprint cerrado el 2026-10-22: **solo backend**, seis PR de
+autenticación descritos en el §5.
 
 ### Hecho
 - Análisis completo de los dos repos de v1 (código, no solo README).
@@ -89,11 +89,11 @@ descartadas y consecuencias: ver [`docs/adr/`](adr).
 
 | Pendiente | Bloquea | Opciones |
 |---|---|---|
-| Gestor de tareas definitivo | Sprint 1 | Jira Cloud (recomendado, guía lista) · GitHub Projects |
 | Proveedor de despliegue | Sprint 8 | Render/Fly (API) + Vercel (web) + Neon (BD) |
 | Licencia | — | MIT previsto, sin fichero `LICENSE` todavía |
 
-Cerradas desde la última revisión: **monorepo** ([ADR-0002](adr/0002-monorepo-frente-a-dos-repositorios.md)),
+Cerradas desde la última revisión: **gestor de tareas → Jira Cloud** (plan del Sprint 1 en
+[DUDAS_Y_CAMBIOS](DUDAS_Y_CAMBIOS.md), 2026-10-22), **monorepo** ([ADR-0002](adr/0002-monorepo-frente-a-dos-repositorios.md)),
 **tiempo real** ([ADR-0007](adr/0007-estrategia-de-tiempo-real.md)) y **versión de Spring
 Boot** ([ADR-0001](adr/0001-stack-tecnologico.md)).
 
@@ -101,25 +101,31 @@ Boot** ([ADR-0001](adr/0001-stack-tecnologico.md)).
 
 ## 5. Siguiente paso concreto
 
-El Sprint 0 está cerrado. **Sprint 1 — Autenticación**, en este orden:
+**Sprint 1 — Autenticación (solo backend).** Alcance y decisiones cerrados el 2026-10-22:
+ver la entrada "Plan del Sprint 1" en [DUDAS_Y_CAMBIOS](DUDAS_Y_CAMBIOS.md).
 
-1. **Acciones manuales pendientes del Sprint 0** (no las puede hacer una sesión de Claude):
-   - Montar el tablero siguiendo [JIRA_SETUP.md](JIRA_SETUP.md) y volcar
-     `scripts/jira/backlog.json` (9 épicas, con criterios de aceptación).
-   - Configurar la protección de `master` en GitHub: PR obligatorio, CI verde,
-     historial lineal, sin force-push.
+1. **Acción manual pendiente**: montar Jira siguiendo [JIRA_SETUP.md](JIRA_SETUP.md) y volcar
+   `scripts/jira/backlog.json`, primero con `--dry-run` (Q9). Desde ese momento, las ramas
+   llevan la clave de la historia: `feat/VIT-12-slug`.
 2. ~~**Contrato antes que código** (guía, Fase 3)~~ — **hecho el 2026-10-21**: springdoc
    3.1.1, `ProblemDetail` (RFC 9457) con `code` y `traceId`, y `docs/openapi.json`
-   versionado. Queda abierta la forma de versionar la API (Q12 en
-   [DUDAS_Y_CAMBIOS](DUDAS_Y_CAMBIOS.md)), que se decide con el primer controlador.
+   versionado. Versionado de la API cerrado el 2026-10-22: prefijo `/api/v1` (Q12).
 3. ~~**Estructura del backend** (guía, Fase 4)~~ — **hecho el 2026-10-22**: seis módulos y
    `ArchitectureTest`. Antes de la slice de citas hay que cerrar con un ADR cómo se
    referencian los módulos entre sí (Q13 en [DUDAS_Y_CAMBIOS](DUDAS_Y_CAMBIOS.md)).
-4. **Primera vertical slice: registro y login.** Entidad `User` sin herencia
-   ([ADR-0003](adr/0003-modelo-de-usuario-sin-herencia-jpa.md)), el `AttributeConverter` de
-   cifrado con prefijo de versión ([ADR-0005](adr/0005-cifrado-en-reposo-y-blind-index.md)),
-   y la rotación de refresh con detección de reuso
-   ([ADR-0004](adr/0004-autenticacion-jwt-rs256-con-refresh-rotativo.md)).
+4. **Autenticación, en seis PR**, por este orden:
+   1. Cifrado base (`common/crypto`): AES-256-GCM con prefijo de versión y blind index
+      ([ADR-0005](adr/0005-cifrado-en-reposo-y-blind-index.md)).
+   2. Registro de pacientes: `User` sin herencia
+      ([ADR-0003](adr/0003-modelo-de-usuario-sin-herencia-jpa.md)), NIF validado,
+      HaveIBeenPwned sin bloquear si cae, 409 sin revelar el campo duplicado.
+   3. Outbox con su worker y verificación de email (migración `V2` de códigos de un solo uso).
+   4. Login JWT RS256 + refresh en cookie, y usuarios demo del perfil `local`.
+   5. Refresh rotativo con detección de reuso
+      ([ADR-0004](adr/0004-autenticacion-jwt-rs256-con-refresh-rotativo.md)).
+   6. Recuperación de contraseña por código de un solo uso por email.
+
+   Fuera de este sprint: 2FA (Sprint 4) y todo el frontend (Sprint 2).
 
 Los criterios de aceptación de esa slice ya están escritos en
 [SCOPE.md](SCOPE.md#sesión-y-refresh): cada escenario Gherkin debe acabar siendo un test con

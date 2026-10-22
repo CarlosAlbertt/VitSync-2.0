@@ -6,6 +6,70 @@
 
 ---
 
+## 2026-10-22 — Plan del Sprint 1: ocho decisiones antes de programar
+
+### Contexto
+
+Antes de la primera slice (registro y login) quedaban decisiones abiertas que el backlog,
+los ADR y la guía no cerraban, o en las que se contradecían. Se cierran aquí para que el
+sprint empiece con el alcance fijo. Rama `chore/sprint1-plan`; no hay código.
+
+### Decisiones
+
+| # | Decisión | Elegido | Motivo |
+|---|---|---|---|
+| 1 | Gestor de tareas | **Jira Cloud** | Es lo que se usa en empresa y el backlog ya se vuelca con `scripts/jira/bootstrap.mjs`. Montarlo sigue pendiente (Q9) |
+| 2 | Frontend en el Sprint 1 | **No: solo backend** | La autenticación ya llena el sprint. El proyecto React arranca en el Sprint 2, con el contrato OpenAPI más rico |
+| 3 | Recuperación de contraseña | **Código de un solo uso por email** | Las preguntas de seguridad de v1 se adivinan o se encuentran en redes sociales; NIST SP 800-63B desaconseja usarlas |
+| 4 | Segundo factor (2FA) | **Sprint 4** | Como el roadmap de la guía; el backlog lo tenía en el Sprint 1 |
+| 5 | Versionado de la API | **Prefijo `/api/v1` en cada controlador** | Cierra Q12. El versionado nativo de Spring 7 afecta a todas las rutas y choca con `/v3/api-docs` |
+| 6 | Contraseñas filtradas (HaveIBeenPwned) | **Sí, sin bloquear si el servicio cae** | Se rechazan contraseñas filtradas (ADR-0004), pero el registro no depende de un tercero: si no responde, aviso en el log y se continúa. En tests se simula |
+| 7 | Envío de emails | **Outbox desde el Sprint 1** | Verificación y recuperación necesitan email. Enviarlo directo sería el fallo P9 de v1 y un cambio "temporal" prohibido por la DoD |
+| 8 | Primer administrador | **Usuarios demo en el perfil `local`** | Un admin, un médico y un paciente con datos sintéticos, solo en `local`. Cómo se crea en producción se decide en el Sprint 8 |
+
+### Cambios en el backlog (`scripts/jira/backlog.json`)
+
+| Historia | Antes | Ahora |
+|---|---|---|
+| Segundo factor por email en el login | S1 | **S4** |
+| Pantallas de login y registro en React | S1 | **S2** |
+| Cliente HTTP tipado con refresh single-flight | S1 | **S2** |
+| Esqueleto del frontend React + TypeScript + Tailwind | S0 (no se hizo) | **S2** |
+| Cifrado en reposo AES-256-GCM con versión de clave | S4 | **S1**: el registro ya guarda el NIF cifrado |
+| Blind index para búsqueda por NIF cifrado | S4 | **S1**: el registro detecta NIF duplicados por el hash |
+| Recuperación de cuenta por preguntas de seguridad | S1 | **Reescrita**: "Recuperación de contraseña por código de un solo uso por email" |
+| Outbox transaccional y envío de emails con reintentos | — | **Nueva, S1** |
+| Usuarios de demostración en el perfil local | — | **Nueva, S1** |
+
+También se actualizan los objetivos de S1, S2 y S4, y el criterio del seed de S2 (los
+usuarios demo ya existen desde S1). Comprobado con `node scripts/jira/bootstrap.mjs --dry-run`:
+9 épicas, 53 historias, 260 puntos.
+
+**A vigilar**: el Sprint 1 queda en **46 puntos**, bastante por encima del resto (18–37).
+Si a mitad de sprint no da, lo primero que sale es la recuperación de contraseña, que no
+bloquea a nada posterior.
+
+### Orden de trabajo del Sprint 1 (un PR por paso)
+
+1. Cifrado base en `common/crypto`: `AttributeConverter` AES-256-GCM con prefijo de versión
+   y blind index HMAC-SHA256; la aplicación no arranca sin claves (ADR-0005).
+2. Registro de pacientes: `User` y `PatientProfile`, `POST /api/v1/auth/register` con NIF
+   validado, HaveIBeenPwned y 409 sin revelar qué campo está duplicado.
+3. Outbox con su worker y verificación de email: migración `V2` con una tabla de códigos de
+   un solo uso (con hash, caducidad e intentos), que el esquema V1 no tiene, y
+   `POST /api/v1/auth/verify`.
+4. Login: JWT RS256 de 15 minutos y refresh en cookie `HttpOnly`, respuestas uniformes, y
+   los usuarios demo del perfil `local`.
+5. Refresh rotativo con detección de reuso y registro en `audit_logs` (ADR-0004).
+6. Recuperación de contraseña por código, revocando todas las sesiones.
+
+### Desviaciones respecto a la guía
+
+El roadmap de la guía pone en el Sprint 1 "front con login y ruta protegida". Pasa al
+Sprint 2 (decisión 2). La guía no se edita: el plan vigente es este y el backlog.
+
+---
+
 ## 2026-10-22 — Estructura de módulos y reglas de arquitectura (ArchUnit)
 
 ### Contexto
@@ -522,7 +586,6 @@ VitSync-2.0/
 | Q5 | **IntelliJ apunta al módulo antiguo** | Acción manual | `.idea/` referencia la ruta anterior. Recargar abriendo `apps/api/pom.xml` como proyecto Maven (o *File → Invalidate Caches*). No afecta al repo: `.idea/` está ignorado. |
 | Q7 | **Licencia** | Abierta | MIT previsto, sin decidir. Mientras no exista el fichero `LICENSE`, el repositorio es legalmente "todos los derechos reservados" aunque esté público. Es lo único del Sprint 0 que sigue sin cerrar. |
 | Q9 | **Tablero de Jira sin montar** | Pendiente | [JIRA_SETUP.md](JIRA_SETUP.md) y `scripts/jira/backlog.json` están listos; falta ejecutarlo. Es una acción manual con credenciales, no automatizable desde aquí. |
-| Q12 | **Versionado de API: prefijo `/api/v1` o el nativo de Spring Framework 7** | Abierta | El [ADR-0001](adr/0001-stack-tecnologico.md) cita el versionado nativo como ventaja de Boot 4. No se adopta todavía: resolver la versión por segmento de ruta se aplica a todas las peticiones, y rutas como `/v3/api-docs` (donde `v3` parece una versión) o `/actuator/health` pueden chocar. Mientras tanto, cada controlador declara `/api/v1/...` en su `@RequestMapping`. Se decide al crear el primer controlador real. |
 | Q13 | **Referencias entre módulos: por id o por entidad JPA** | Abierta | `ArchitectureTest` exige que un módulo solo use de otro su capa `application`, así que una entidad no puede tener `@ManyToOne` a una entidad de otro módulo (el ejemplo de la Fase 5 de la guía sí lo hace). Propuesta: guardar el id (`patientId`, `doctorId`) y pedir los datos al `application` del otro módulo; la FK se mantiene en la BD, así que la integridad no se pierde, solo el acoplamiento en Java. Es discutible y cara de revertir: se cierra con un ADR antes de la slice de citas. |
 
 ## Dudas resueltas
@@ -536,3 +599,4 @@ VitSync-2.0/
 | Q8 | Colisión en el puerto 5432 | **Resuelta**: el contenedor se publica en el 5433 por defecto (`DB_PORT` para cambiarlo); el arranque documentado funciona sin exportar nada · 2026-10-01 |
 | Q11 | `./mvnw` versionado sin permiso de ejecución | **Resuelta**: `100755` en el índice; desbloquea la primera ejecución de la CI y con ella Q10 · 2026-10-01 |
 | Q10 | Protección de `master` sin configurar | **Resuelta**: ruleset activo sobre `master` con PR obligatorio, checks `api (build + tests)` y `escaneo de secretos` obligatorios, historial lineal y sin force-push ni borrado · 2026-10-22 |
+| Q12 | Versionado de API: prefijo `/api/v1` o el nativo de Spring Framework 7 | **Prefijo `/api/v1`** en el `@RequestMapping` de cada controlador; el nativo afecta a todas las rutas y choca con `/v3/api-docs` · 2026-10-22 |
