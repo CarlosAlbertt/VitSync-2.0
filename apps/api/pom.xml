@@ -26,6 +26,7 @@
 		-->
 		<testcontainers.version>1.21.4</testcontainers.version>
 		<springdoc.version>3.1.1</springdoc.version>
+		<archunit.version>1.5.1</archunit.version>
 	</properties>
 
 	<dependencyManagement>
@@ -142,6 +143,18 @@
 		<dependency>
 			<groupId>org.testcontainers</groupId>
 			<artifactId>postgresql</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<!--
+			ArchUnit: comprueba en un test las fronteras entre modulos y capas (guia, Fase 4;
+			ver ArchitectureTest). Se usa el artefacto base y no archunit-junit5 a proposito:
+			Boot 4 trae JUnit 6 y el motor JUnit propio de ArchUnit esta hecho para la
+			plataforma anterior. Con el base, las reglas son tests JUnit normales.
+		-->
+		<dependency>
+			<groupId>com.tngtech.archunit</groupId>
+			<artifactId>archunit</artifactId>
+			<version>${archunit.version}</version>
 			<scope>test</scope>
 		</dependency>
 	</dependencies>

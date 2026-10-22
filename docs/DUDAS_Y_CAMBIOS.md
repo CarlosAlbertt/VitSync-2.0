@@ -6,6 +6,60 @@
 
 ---
 
+## 2026-10-22 — Estructura de módulos y reglas de arquitectura (ArchUnit)
+
+### Contexto
+
+Paso 3 del "siguiente paso concreto" del [HANDOFF](HANDOFF.md) (guía, Fase 4): crear los
+módulos del monolito modular y que sus fronteras las compruebe un test, no la memoria.
+Rama `feat/module-structure`.
+
+### Cambios realizados
+
+**1. Seis módulos bajo `com.vitsync`**, cada uno con un `package-info.java` que dice de qué
+se ocupa y de qué tablas es dueño:
+
+| Módulo | Dueño de |
+|---|---|
+| `iam` | `users`, `patient_profiles`, `doctor_profiles`, `refresh_tokens` |
+| `catalog` | `specialties`, `facilities`, `doctor_facilities` |
+| `scheduling` | `schedule_rules`, `schedule_exceptions`, `appointments` |
+| `clinical` | `medical_reports`, `report_files` |
+| `gdpr` | `user_consents`, `gdpr_requests` |
+| `notification` | `outbox_messages` |
+
+`messaging` (chat) no se crea: es de v2.1 según [SCOPE](SCOPE.md). Las capas internas
+(`api`, `application`, `domain`, `infrastructure`) aparecen con su primera clase; las reglas
+ya las contemplan aunque no existan.
+
+**2. ArchUnit 1.5.1** (`com.tngtech.archunit:archunit`, scope test). Se usa el artefacto base
+y no `archunit-junit5` a propósito: Boot 4 trae JUnit 6 y el motor JUnit de ArchUnit está
+hecho para la plataforma anterior. Las reglas son tests JUnit normales.
+
+**3. `ArchitectureTest`** — cinco reglas, 10 casos (una se ejecuta por módulo):
+
+| Regla | Qué impide |
+|---|---|
+| Capas en una sola dirección | Que `api` use `infrastructure`, o que algo use `api` |
+| Un módulo solo usa de otro su `application` | Usar controladores, entidades o repositorios ajenos |
+| `common` no depende de ningún módulo | Que la base compartida cree ciclos |
+| `domain` sin web ni Spring Data | Lógica de negocio acoplada a HTTP o a la persistencia |
+| Módulos sin ciclos | Dos módulos que en realidad son uno mal partido |
+
+Comprobado en ambos sentidos: en verde sin violaciones, y en rojo, señalando clase y campo,
+al introducir a propósito un controlador que usa un repositorio y un módulo que usa la
+entidad de otro.
+
+`./mvnw verify` → **19 tests en verde**.
+
+### Consecuencia que hay que decidir: referencias entre módulos por id
+
+La regla de módulos prohíbe que una entidad de un módulo referencie una entidad de otro. El
+ejemplo de la Fase 5 de la guía lo hace (`Appointment` → `@ManyToOne PatientProfile`, de
+`iam`). Ver Q13.
+
+---
+
 ## 2026-10-21 — Contrato de API: errores RFC 9457 y OpenAPI versionado
 
 ### Contexto
@@ -468,8 +522,8 @@ VitSync-2.0/
 | Q5 | **IntelliJ apunta al módulo antiguo** | Acción manual | `.idea/` referencia la ruta anterior. Recargar abriendo `apps/api/pom.xml` como proyecto Maven (o *File → Invalidate Caches*). No afecta al repo: `.idea/` está ignorado. |
 | Q7 | **Licencia** | Abierta | MIT previsto, sin decidir. Mientras no exista el fichero `LICENSE`, el repositorio es legalmente "todos los derechos reservados" aunque esté público. Es lo único del Sprint 0 que sigue sin cerrar. |
 | Q9 | **Tablero de Jira sin montar** | Pendiente | [JIRA_SETUP.md](JIRA_SETUP.md) y `scripts/jira/backlog.json` están listos; falta ejecutarlo. Es una acción manual con credenciales, no automatizable desde aquí. |
-| Q10 | **Protección de `master` sin configurar** | Pendiente | PR obligatorio, CI verde y squash merge. Se configura en GitHub una vez la CI haya corrido al menos una vez. |
 | Q12 | **Versionado de API: prefijo `/api/v1` o el nativo de Spring Framework 7** | Abierta | El [ADR-0001](adr/0001-stack-tecnologico.md) cita el versionado nativo como ventaja de Boot 4. No se adopta todavía: resolver la versión por segmento de ruta se aplica a todas las peticiones, y rutas como `/v3/api-docs` (donde `v3` parece una versión) o `/actuator/health` pueden chocar. Mientras tanto, cada controlador declara `/api/v1/...` en su `@RequestMapping`. Se decide al crear el primer controlador real. |
+| Q13 | **Referencias entre módulos: por id o por entidad JPA** | Abierta | `ArchitectureTest` exige que un módulo solo use de otro su capa `application`, así que una entidad no puede tener `@ManyToOne` a una entidad de otro módulo (el ejemplo de la Fase 5 de la guía sí lo hace). Propuesta: guardar el id (`patientId`, `doctorId`) y pedir los datos al `application` del otro módulo; la FK se mantiene en la BD, así que la integridad no se pierde, solo el acoplamiento en Java. Es discutible y cara de revertir: se cierra con un ADR antes de la slice de citas. |
 
 ## Dudas resueltas
 
@@ -481,3 +535,4 @@ VitSync-2.0/
 | Q6 | Monorepo vs dos repos | **Monorepo** — [ADR-0002](adr/0002-monorepo-frente-a-dos-repositorios.md) · 2026-09-12 |
 | Q8 | Colisión en el puerto 5432 | **Resuelta**: el contenedor se publica en el 5433 por defecto (`DB_PORT` para cambiarlo); el arranque documentado funciona sin exportar nada · 2026-10-01 |
 | Q11 | `./mvnw` versionado sin permiso de ejecución | **Resuelta**: `100755` en el índice; desbloquea la primera ejecución de la CI y con ella Q10 · 2026-10-01 |
+| Q10 | Protección de `master` sin configurar | **Resuelta**: ruleset activo sobre `master` con PR obligatorio, checks `api (build + tests)` y `escaneo de secretos` obligatorios, historial lineal y sin force-push ni borrado · 2026-10-22 |
