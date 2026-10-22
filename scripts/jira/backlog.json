@@ -3,10 +3,10 @@
   "boardHint": "Scrum team-managed",
   "sprints": [
     { "id": "S0", "name": "S0 - Kickoff e infraestructura", "goal": "Repo, ADRs, entorno local reproducible, Flyway y CI en verde" },
-    { "id": "S1", "name": "S1 - Autenticacion y cuentas", "goal": "Registro, verificacion por email, login, refresh rotativo y 2FA de punta a punta" },
-    { "id": "S2", "name": "S2 - Catalogo", "goal": "Especialidades, centros y cuadro medico paginados y visibles en React" },
+    { "id": "S1", "name": "S1 - Autenticacion y cuentas", "goal": "API de registro, verificacion por email, login, refresh rotativo y recuperacion de contrasena, con cifrado del NIF y outbox de emails" },
+    { "id": "S2", "name": "S2 - Catalogo", "goal": "Especialidades, centros y cuadro medico paginados; arranque del frontend React con login y registro" },
     { "id": "S3", "name": "S3 - Reserva de citas", "goal": "Agenda, huecos, reserva y cancelacion con anti-doble-reserva probado" },
-    { "id": "S4", "name": "S4 - Perfil y datos clinicos", "goal": "Perfil editable, cifrado en reposo y sesiones activas" },
+    { "id": "S4", "name": "S4 - Perfil y datos clinicos", "goal": "Perfil editable, datos clinicos cifrados, sesiones activas y segundo factor por email" },
     { "id": "S5", "name": "S5 - Informes y ficheros", "goal": "Almacenamiento S3, URLs prefirmadas y descarga auditada" },
     { "id": "S6", "name": "S6 - Panel de administracion", "goal": "CRUD de usuarios, medicos y especialidades con roles y auditoria" },
     { "id": "S7", "name": "S7 - RGPD", "goal": "Consentimientos, exportacion de datos y supresion con anonimizacion" },
@@ -61,7 +61,7 @@
         },
         {
           "summary": "Esqueleto del frontend React + TypeScript + Tailwind",
-          "sprint": "S0",
+          "sprint": "S2",
           "points": 3,
           "labels": ["frontend"],
           "as": "Como desarrollador quiero la SPA inicializada con las convenciones acordadas para empezar por features",
@@ -109,7 +109,7 @@
         },
         {
           "summary": "Segundo factor por email en el login",
-          "sprint": "S1",
+          "sprint": "S4",
           "points": 5,
           "labels": ["backend", "security"],
           "as": "Como usuario quiero un segundo factor para proteger mis datos de salud",
@@ -117,7 +117,7 @@
         },
         {
           "summary": "Pantallas de login y registro en React",
-          "sprint": "S1",
+          "sprint": "S2",
           "points": 5,
           "labels": ["frontend"],
           "as": "Como usuario quiero formularios claros y accesibles para entrar sin fricción",
@@ -125,19 +125,35 @@
         },
         {
           "summary": "Cliente HTTP tipado con refresh single-flight",
-          "sprint": "S1",
+          "sprint": "S2",
           "points": 5,
           "labels": ["frontend", "security"],
           "as": "Como desarrollador frontend quiero un único punto de acceso a la API para centralizar la sesión",
           "ac": ["Dadas N peticiones que reciben 401 a la vez", "Cuando el interceptor refresca", "Entonces solo se emite una llamada a /auth/refresh y todas se reintentan"]
         },
         {
-          "summary": "Recuperación de cuenta por preguntas de seguridad",
+          "summary": "Recuperación de contraseña por código de un solo uso por email",
           "sprint": "S1",
           "points": 5,
           "labels": ["backend", "security"],
           "as": "Como usuario que olvidó la contraseña quiero recuperarla sin soporte humano",
-          "ac": ["Dadas dos respuestas correctas y el código enviado por email", "Cuando completo el reseteo", "Entonces la contraseña cambia y se revocan todas mis sesiones"]
+          "ac": ["Dado un código de un solo uso enviado a mi email, guardado con hash y vigente 15 minutos", "Cuando envío POST /api/v1/auth/password-reset con el código y la contraseña nueva", "Entonces la contraseña cambia y se revocan todas mis sesiones", "Y la petición del código responde igual exista o no el email, para no revelar cuentas"]
+        },
+        {
+          "summary": "Outbox transaccional y envío de emails con reintentos",
+          "sprint": "S1",
+          "points": 5,
+          "labels": ["backend", "infra"],
+          "as": "Como responsable del sistema quiero que ningún email se pierda ni bloquee una operación para que verificación y recuperación sean fiables",
+          "ac": ["Dada una operación que necesita enviar un email", "Cuando se confirma su transacción", "Entonces el email queda en outbox_messages en esa misma transacción", "Y un proceso aparte lo envía con reintentos y backoff, visible en Mailpit en local"]
+        },
+        {
+          "summary": "Usuarios de demostración en el perfil local",
+          "sprint": "S1",
+          "points": 2,
+          "labels": ["backend", "infra"],
+          "as": "Como desarrollador quiero un admin, un médico y un paciente de prueba en local para probar el login y los roles sin crearlos a mano",
+          "ac": ["Dado el perfil local activo", "Cuando arranca la aplicación", "Entonces existen los tres usuarios con datos sintéticos y contraseñas documentadas en CONTRIBUTING", "Y fuera del perfil local no se crea ninguno"]
         }
       ]
     },
@@ -193,7 +209,7 @@
           "points": 3,
           "labels": ["db", "infra"],
           "as": "Como desarrollador quiero datos realistas en local para probar sin inventarlos cada vez",
-          "ac": ["Dado el perfil demo activo", "Cuando arranca la aplicación", "Entonces existen especialidades, centros, profesionales y un paciente de prueba", "Y el seed nunca se aplica en producción"]
+          "ac": ["Dado el perfil demo activo", "Cuando arranca la aplicación", "Entonces existen especialidades y centros, y los médicos demo del Sprint 1 tienen especialidad y centro asignados", "Y el seed nunca se aplica en producción"]
         }
       ]
     },
@@ -269,7 +285,7 @@
       "stories": [
         {
           "summary": "Cifrado en reposo AES-256-GCM con versión de clave",
-          "sprint": "S4",
+          "sprint": "S1",
           "points": 8,
           "labels": ["backend", "security", "gdpr"],
           "as": "Como responsable de cumplimiento quiero los datos de salud cifrados para satisfacer el Art. 32 RGPD",
@@ -277,7 +293,7 @@
         },
         {
           "summary": "Blind index para búsqueda por NIF cifrado",
-          "sprint": "S4",
+          "sprint": "S1",
           "points": 5,
           "labels": ["backend", "db", "security"],
           "as": "Como administrador quiero buscar por NIF sin descifrar toda la tabla para que la búsqueda sea viable",
