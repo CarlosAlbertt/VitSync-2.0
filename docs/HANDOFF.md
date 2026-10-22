@@ -2,7 +2,7 @@
 
 > Documento de retoma. Léelo entero antes de tocar nada: en 5 minutos sabes dónde está
 > el proyecto, qué está decidido y cuál es el siguiente paso concreto.
-> Última actualización: **2026-10-21**.
+> Última actualización: **2026-10-22**.
 
 ---
 
@@ -18,11 +18,11 @@ el proceso completo de ingeniería que se sigue en una empresa, no solo el produ
 
 ---
 
-## 2. Estado actual (2026-10-21)
+## 2. Estado actual (2026-10-22)
 
-**Sprint 1 en curso.** Hecho el contrato de API (paso 2 del §5): errores RFC 9457, traza
-por petición, seguridad base y `docs/openapi.json` vigilado por un test. `./mvnw verify`
-pasa con 9 tests. Siguiente: la estructura de módulos (paso 3).
+**Sprint 1 en curso.** Hechos el contrato de API (paso 2 del §5) y la estructura de
+módulos con sus reglas de arquitectura (paso 3). `./mvnw verify` pasa con 19 tests.
+Siguiente: la primera slice, registro y login (paso 4).
 
 ### Hecho
 - Análisis completo de los dos repos de v1 (código, no solo README).
@@ -46,13 +46,16 @@ pasa con 9 tests. Siguiente: la estructura de módulos (paso 3).
   error RFC 9457 con `code` y `traceId`, `X-Request-Id` en cada respuesta, seguridad
   cerrada por defecto y `docs/openapi.json` comparado con el código en cada `verify`.
   Detalle en [DUDAS_Y_CAMBIOS](DUDAS_Y_CAMBIOS.md) (2026-10-21).
+- **Módulos y arquitectura (Sprint 1)**: `iam`, `catalog`, `scheduling`, `clinical`, `gdpr`
+  y `notification` bajo `com.vitsync`, con `ArchitectureTest` (ArchUnit) haciendo cumplir
+  capas y fronteras entre módulos. Detalle en [DUDAS_Y_CAMBIOS](DUDAS_Y_CAMBIOS.md) (2026-10-22).
+- **`master` protegida** con un ruleset: PR obligatorio, CI verde, historial lineal.
 
 ### No hecho todavía
 - **Sin código de dominio**: `apps/api` tiene la base transversal (`common/`: errores,
   seguridad, OpenAPI, traza) pero ninguna entidad ni endpoint de negocio. No existe
   `apps/web` (Fase 9).
 - Sin tablero de Jira (guía lista en [JIRA_SETUP.md](JIRA_SETUP.md), falta ejecutarla).
-- `master` sin reglas de protección configuradas en GitHub.
 - Sin licencia (ver [DUDAS_Y_CAMBIOS](DUDAS_Y_CAMBIOS.md), Q7).
 - La CI no comprueba aún formato, cobertura ni vulnerabilidades de dependencias: esas
   herramientas entran en la Fase 11. El drift de OpenAPI ya lo detecta `OpenApiContractTest`.
@@ -109,8 +112,9 @@ El Sprint 0 está cerrado. **Sprint 1 — Autenticación**, en este orden:
    3.1.1, `ProblemDetail` (RFC 9457) con `code` y `traceId`, y `docs/openapi.json`
    versionado. Queda abierta la forma de versionar la API (Q12 en
    [DUDAS_Y_CAMBIOS](DUDAS_Y_CAMBIOS.md)), que se decide con el primer controlador.
-3. **Estructura del backend** (guía, Fase 4): package-by-feature bajo `com.vitsync`, con el
-   test de ArchUnit que impide que un módulo importe los internos de otro.
+3. ~~**Estructura del backend** (guía, Fase 4)~~ — **hecho el 2026-10-22**: seis módulos y
+   `ArchitectureTest`. Antes de la slice de citas hay que cerrar con un ADR cómo se
+   referencian los módulos entre sí (Q13 en [DUDAS_Y_CAMBIOS](DUDAS_Y_CAMBIOS.md)).
 4. **Primera vertical slice: registro y login.** Entidad `User` sin herencia
    ([ADR-0003](adr/0003-modelo-de-usuario-sin-herencia-jpa.md)), el `AttributeConverter` de
    cifrado con prefijo de versión ([ADR-0005](adr/0005-cifrado-en-reposo-y-blind-index.md)),
