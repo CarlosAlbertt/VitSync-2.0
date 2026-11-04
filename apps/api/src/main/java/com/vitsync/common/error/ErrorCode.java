@@ -21,7 +21,15 @@ public enum ErrorCode {
     UNAUTHENTICATED(HttpStatus.UNAUTHORIZED, "Authentication required", "A valid access token is required"),
     ACCESS_DENIED(HttpStatus.FORBIDDEN, "Access denied", "You are not allowed to perform this action"),
     RESOURCE_NOT_FOUND(HttpStatus.NOT_FOUND, "Resource not found", "The requested resource does not exist"),
-    INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "Internal error", "An unexpected error occurred");
+    INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "Internal error", "An unexpected error occurred"),
+
+    // ----- Identidad (iam) -----
+    // 409 sin decir si choca el email o el NIF: decir cuál permitiría comprobar, campo a
+    // campo, si una persona concreta tiene cuenta (enumeración).
+    ACCOUNT_ALREADY_EXISTS(HttpStatus.CONFLICT, "Account already exists",
+            "An account with these details already exists"),
+    PASSWORD_BREACHED(HttpStatus.BAD_REQUEST, "Password breached",
+            "This password has appeared in a data breach; choose a different one");
 
 
     // final: cada constante fija sus valores al crearse y ya no cambian.
