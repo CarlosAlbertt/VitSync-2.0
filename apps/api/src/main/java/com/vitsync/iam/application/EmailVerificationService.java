@@ -82,4 +82,15 @@ public class EmailVerificationService {
                 "code", code,
                 "minutes", String.valueOf(CodePurpose.EMAIL_VERIFICATION.ttl().toMinutes())));
     }
+
+    /**
+     * Reenvía el código solo si no queda uno utilizable: así repetir el login no inunda de
+     * emails al usuario, pero un código caducado o agotado se repone.
+     */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void resendIfNeeded(User user) {
+        if (!codes.hasUsableCode(user, CodePurpose.EMAIL_VERIFICATION)) {
+            sendCode(user);
+        }
+    }
 }

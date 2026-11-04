@@ -1,22 +1,34 @@
 package com.vitsync.iam.api;
 
+import com.vitsync.iam.api.dto.LoginRequest;
 import com.vitsync.iam.api.dto.RegisterRequest;
 import com.vitsync.iam.api.dto.RegistrationResponse;
+import com.vitsync.iam.api.dto.SessionResponse;
 import com.vitsync.iam.api.dto.VerifyEmailRequest;
 import com.vitsync.iam.api.mapper.AuthMapper;
+import com.vitsync.iam.api.mapper.MeMapper;
 import com.vitsync.iam.application.EmailVerificationService;
 import com.vitsync.iam.application.RegistrationService;
+import com.vitsync.iam.application.Session;
+import com.vitsync.iam.application.SessionService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.enums.ParameterIn;
+import io.swagger.v3.oas.annotations.headers.Header;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
@@ -36,13 +48,19 @@ public class AuthController {
 
     private final RegistrationService registration;
     private final EmailVerificationService verification;
+    private final SessionService sessions;
     private final AuthMapper mapper;
+    private final MeMapper meMapper;
+    private final RefreshCookie cookie;
 
     public AuthController(RegistrationService registration, EmailVerificationService verification,
-                          AuthMapper mapper) {
+                          SessionService sessions, AuthMapper mapper, MeMapper meMapper, RefreshCookie cookie) {
         this.registration = registration;
         this.verification = verification;
+        this.sessions = sessions;
         this.mapper = mapper;
+        this.meMapper = meMapper;
+        this.cookie = cookie;
     }
 
     @PostMapping("/register")
@@ -66,9 +84,46 @@ public class AuthController {
     @ApiResponse(responseCode = "204", description = "Account active")
     @ApiResponse(responseCode = "400", description = "VALIDATION_FAILED or INVALID_OR_EXPIRED_CODE",
             content = @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class)))
-    @ApiResponse(responseCode = "429", description = "TOO_MANY_ATTEMPTS: the code can no longer be used",
+    @ApiResponse(responseCode = "429", description = "TOO_MANY_ATTEMPTS: the code is burnt; logging in again sends a new one",
             content = @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class)))
     public void verify(@Valid @RequestBody VerifyEmailRequest request) {
         verification.verify(request.email(), request.code());
+    }
+
+    @PostMapping("/login")
+    @Operation(summary = "Log in",
+            description = "Returns a 15-minute access token and sets the refresh token in an HttpOnly cookie. "
+                    + "Unknown email and wrong password get the same 401. An unverified account gets 403 "
+                    + "ACCOUNT_NOT_VERIFIED and a new verification code by email if the previous one is no longer usable.")
+    @ApiResponse(responseCode = "200", description = "Session started",
+            headers = @Header(name = HttpHeaders.SET_COOKIE,
+                    description = RefreshCookie.NAME + "=<opaque>; HttpOnly; Secure; SameSite=Lax; Path=/api/v1/auth; Max-Age=604800"))
+    @ApiResponse(responseCode = "401", description = "INVALID_CREDENTIALS",
+            content = @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class)))
+    @ApiResponse(responseCode = "403", description = "ACCOUNT_NOT_VERIFIED or ACCOUNT_DISABLED",
+            content = @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class)))
+    public ResponseEntity<SessionResponse> login(@Valid @RequestBody LoginRequest request,
+                                                 @RequestHeader(value = HttpHeaders.USER_AGENT, required = false)
+                                                 @Parameter(hidden = true) String userAgent) {
+        return withSession(sessions.login(request.email(), request.password(), userAgent));
+    }
+
+    @PostMapping("/logout")
+    @Operation(summary = "Log out",
+            description = "Revokes the session of the refresh cookie (its whole token family) and clears the cookie. "
+                    + "Always 204, even without a cookie: the result for the client is the same.")
+    @ApiResponse(responseCode = "204", description = "Logged out")
+    public ResponseEntity<Void> logout(
+            @CookieValue(name = RefreshCookie.NAME, required = false)
+            @Parameter(in = ParameterIn.COOKIE, name = RefreshCookie.NAME, hidden = true) String refreshToken) {
+        sessions.logout(refreshToken);
+        return ResponseEntity.noContent().header(HttpHeaders.SET_COOKIE, cookie.clear().toString()).build();
+    }
+
+    // El refresh va a la cookie; el access token y el usuario, al cuerpo.
+    private ResponseEntity<SessionResponse> withSession(Session session) {
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, cookie.issue(session.refreshToken()).toString())
+                .body(meMapper.toResponse(session));
     }
 }

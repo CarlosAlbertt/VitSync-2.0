@@ -12,10 +12,84 @@
     "bearerAuth" : [ ]
   } ],
   "tags" : [ {
+    "description" : "The authenticated user",
+    "name" : "Me"
+  }, {
     "description" : "Registration, verification, session and password recovery",
     "name" : "Auth"
   } ],
   "paths" : {
+    "/api/v1/auth/login" : {
+      "post" : {
+        "description" : "Returns a 15-minute access token and sets the refresh token in an HttpOnly cookie. Unknown email and wrong password get the same 401. An unverified account gets 403 ACCOUNT_NOT_VERIFIED and a new verification code by email if the previous one is no longer usable.",
+        "operationId" : "login",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/LoginRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SessionResponse"
+                }
+              }
+            },
+            "description" : "Session started",
+            "headers" : {
+              "Set-Cookie" : {
+                "description" : "vitsync_refresh=<opaque>; HttpOnly; Secure; SameSite=Lax; Path=/api/v1/auth; Max-Age=604800",
+                "style" : "simple"
+              }
+            }
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "INVALID_CREDENTIALS"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "ACCOUNT_NOT_VERIFIED or ACCOUNT_DISABLED"
+          }
+        },
+        "security" : [ ],
+        "summary" : "Log in",
+        "tags" : [ "Auth" ]
+      }
+    },
+    "/api/v1/auth/logout" : {
+      "post" : {
+        "description" : "Revokes the session of the refresh cookie (its whole token family) and clears the cookie. Always 204, even without a cookie: the result for the client is the same.",
+        "operationId" : "logout",
+        "responses" : {
+          "204" : {
+            "description" : "Logged out"
+          }
+        },
+        "security" : [ ],
+        "summary" : "Log out",
+        "tags" : [ "Auth" ]
+      }
+    },
     "/api/v1/auth/register" : {
       "post" : {
         "description" : "Creates the account in PENDING_VERIFICATION, together with its patient profile, and emails a 6-digit verification code valid for 10 minutes.",
@@ -103,17 +177,147 @@
                 }
               }
             },
-            "description" : "TOO_MANY_ATTEMPTS: the code can no longer be used"
+            "description" : "TOO_MANY_ATTEMPTS: the code is burnt; logging in again sends a new one"
           }
         },
         "security" : [ ],
         "summary" : "Verify the email with the emailed code",
         "tags" : [ "Auth" ]
       }
+    },
+    "/api/v1/me" : {
+      "get" : {
+        "operationId" : "me",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/MeResponse"
+                }
+              }
+            },
+            "description" : "The user"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "UNAUTHENTICATED"
+          }
+        },
+        "summary" : "Get the authenticated user",
+        "tags" : [ "Me" ]
+      },
+      "patch" : {
+        "description" : "Absent fields are left unchanged. Email, NIF and role cannot be changed here.",
+        "operationId" : "update",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/UpdateMeRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/MeResponse"
+                }
+              }
+            },
+            "description" : "The updated user"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "VALIDATION_FAILED"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "UNAUTHENTICATED"
+          }
+        },
+        "summary" : "Update the authenticated user's own data",
+        "tags" : [ "Me" ]
+      }
     }
   },
   "components" : {
     "schemas" : {
+      "LoginRequest" : {
+        "type" : "object",
+        "properties" : {
+          "email" : {
+            "type" : "string",
+            "example" : "paciente@vitsync.test",
+            "maxLength" : 254,
+            "minLength" : 0
+          },
+          "password" : {
+            "type" : "string",
+            "maxLength" : 128,
+            "minLength" : 0
+          }
+        },
+        "required" : [ "email", "password" ]
+      },
+      "MeResponse" : {
+        "type" : "object",
+        "properties" : {
+          "email" : {
+            "type" : "string",
+            "example" : "paciente@vitsync.test"
+          },
+          "emailVerified" : {
+            "type" : "boolean"
+          },
+          "firstName" : {
+            "type" : "string",
+            "example" : "Lucía"
+          },
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "lastName" : {
+            "type" : "string",
+            "example" : "García Pérez"
+          },
+          "locale" : {
+            "type" : "string",
+            "example" : "es-ES"
+          },
+          "phone" : {
+            "type" : [ "string", "null" ],
+            "example" : "+34600000000"
+          },
+          "role" : {
+            "type" : "string",
+            "enum" : [ "PATIENT", "DOCTOR", "ADMIN" ]
+          }
+        }
+      },
       "ProblemDetail" : {
         "type" : "object",
         "properties" : {
@@ -197,6 +401,45 @@
           "status" : {
             "type" : "string",
             "example" : "PENDING_VERIFICATION"
+          }
+        }
+      },
+      "SessionResponse" : {
+        "type" : "object",
+        "properties" : {
+          "accessToken" : {
+            "type" : "string",
+            "description" : "JWT RS256, valid for 15 minutes. Send it as 'Authorization: Bearer <token>'"
+          },
+          "user" : {
+            "$ref" : "#/components/schemas/MeResponse"
+          }
+        }
+      },
+      "UpdateMeRequest" : {
+        "type" : "object",
+        "properties" : {
+          "firstName" : {
+            "type" : "string",
+            "maxLength" : 100,
+            "minLength" : 0,
+            "pattern" : ".*\\S.*"
+          },
+          "lastName" : {
+            "type" : "string",
+            "maxLength" : 100,
+            "minLength" : 0,
+            "pattern" : ".*\\S.*"
+          },
+          "locale" : {
+            "type" : "string",
+            "example" : "es-ES",
+            "pattern" : "^[a-z]{2}-[A-Z]{2}$"
+          },
+          "phone" : {
+            "type" : "string",
+            "description" : "Empty string removes the phone",
+            "pattern" : "^$|^\\+?[0-9]{9,15}$"
           }
         }
       },

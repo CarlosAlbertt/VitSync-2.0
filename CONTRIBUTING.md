@@ -41,7 +41,27 @@ Servicios locales:
 | MinIO (consola) | http://localhost:9001 | `minio` / `minio12345` |
 | Mailpit (bandeja) | http://localhost:8025 | — |
 
-Esas credenciales son de desarrollo y son públicas a propósito. **Ningún secreto real entra
+### Usuarios de demostración (solo perfil `local`)
+
+Al arrancar con el perfil `local` se crean, si no existen, tres cuentas activas con datos
+sintéticos. Fuera de `local` no se crea ninguna.
+
+| Rol | Email | Contraseña |
+|---|---|---|
+| Administrador | `admin@vitsync.test` | `Demostracion-2026` |
+| Médico | `medico@vitsync.test` | `Demostracion-2026` |
+| Paciente | `paciente@vitsync.test` | `Demostracion-2026` |
+
+```bash
+curl -i -X POST localhost:8080/api/v1/auth/login -H 'Content-Type: application/json' \
+  -d '{"email":"paciente@vitsync.test","password":"Demostracion-2026"}'
+```
+
+Los emails (verificación, recuperación) se ven en Mailpit. Las claves JWT de `local` se
+generan en memoria al arrancar: al reiniciar la API hay que volver a hacer login.
+
+Esas credenciales son de desarrollo y son públicas a propósito (`.gitleaks.toml` solo hace
+una excepción con la contraseña demo). **Ningún secreto real entra
 en el repositorio**; gitleaks lo comprueba en CI. v1 llegó a tener credenciales en el
 historial de git: no se repite.
 

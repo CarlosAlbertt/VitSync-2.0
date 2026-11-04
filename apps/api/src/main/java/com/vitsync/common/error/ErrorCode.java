@@ -35,7 +35,15 @@ public enum ErrorCode {
     INVALID_OR_EXPIRED_CODE(HttpStatus.BAD_REQUEST, "Invalid code",
             "The code is invalid or has expired"),
     TOO_MANY_ATTEMPTS(HttpStatus.TOO_MANY_REQUESTS, "Too many attempts",
-            "Too many failed attempts; request a new code");
+            "Too many failed attempts; request a new code"),
+    // Mismo error si el email no existe o la contraseña es incorrecta (ADR-0004).
+    INVALID_CREDENTIALS(HttpStatus.UNAUTHORIZED, "Invalid credentials",
+            "The email or password is incorrect"),
+    // Solo se devuelven tras comprobar la contraseña: ya no sirven para enumerar cuentas.
+    ACCOUNT_NOT_VERIFIED(HttpStatus.FORBIDDEN, "Account not verified",
+            "Verify your email before logging in; we have sent you a code"),
+    ACCOUNT_DISABLED(HttpStatus.FORBIDDEN, "Account disabled",
+            "This account cannot log in");
 
 
     // final: cada constante fija sus valores al crearse y ya no cambian.

@@ -6,6 +6,91 @@
 
 ---
 
+## 2026-11-04 — Login con JWT RS256, `/me` y usuarios demo (VIT-63 + VIT-67)
+
+### Contexto
+
+Paso 4 del plan del Sprint 1. Rama `feat/VIT-63-login-jwt`, apilada sobre
+`feat/VIT-66-outbox-email-verification`.
+
+### Cambios realizados
+
+**Endpoints**
+
+| Método y ruta | Respuesta |
+|---|---|
+| `POST /api/v1/auth/login` `{ email, password }` | `200 { accessToken, user }` + cookie `vitsync_refresh` |
+| `POST /api/v1/auth/logout` | `204` siempre; revoca la familia del refresh y borra la cookie |
+| `GET /api/v1/me` | `200 Me` (Bearer) |
+| `PATCH /api/v1/me` `{ firstName?, lastName?, phone?, locale? }` | `200 Me`; ausente = sin cambios, `phone: ""` lo borra |
+
+`Me = { id, email, role, firstName, lastName, phone, locale, emailVerified }`, con `id` =
+`public_id`. Sin NIF: no hace falta fuera del alta.
+
+**JWT (`common/security`)**
+
+- `AccessTokenService`: RS256, 15 minutos, claims mínimos (`sub` = `public_id`, `role`,
+  `jti`, `iss`, `iat`, `exp`). Nada personal: un JWT se lee con base64.
+- `JwtConfig`: `NimbusJwtEncoder` para firmar y `NimbusJwtDecoder` que **solo acepta RS256**
+  (cierra el cambio de `alg` a `none`/HS256), valida emisor y caducidad.
+- `JwtKeys`: carga el par RSA en PEM (`JWT_PRIVATE_KEY`, `JWT_PUBLIC_KEY`, admite `\n`
+  literales) y lo valida al arrancar: RSA, 2048+ bits y pública que corresponde a la privada.
+  **Sin claves la app no arranca**, salvo con `allow-ephemeral-keys=true` (`local` y tests),
+  que genera un par en memoria. No hay ningún PEM en el repositorio.
+- `SecurityConfig`: `oauth2ResourceServer().jwt()` con el conversor `role` → `ROLE_<role>`, y
+  el mismo entry point que el resto, así un token caducado o manipulado da el 401 RFC 9457.
+
+**Login (`SessionService`)**
+
+- **Respuesta y tiempo uniformes**: si el email no existe se compara contra un hash ficticio
+  del mismo coste. Email desconocido y contraseña incorrecta dan el mismo `401
+  INVALID_CREDENTIALS`.
+- Solo **después** de acertar la contraseña: `403 ACCOUNT_NOT_VERIFIED` (y un código nuevo
+  por email si el anterior ya no sirve) o `403 ACCOUNT_DISABLED`.
+- Refresh opaco de 32 bytes (`SecureRandom`, base64url), **solo su SHA-256 en la BD**,
+  `family_id` nuevo por login, 7 días.
+- Cookie `HttpOnly; Secure; SameSite=Lax; Path=/api/v1/auth`. `Secure` se apaga solo en
+  `local` (sin HTTPS).
+
+**Usuarios demo (VIT-67)**: `DemoUsersSeeder` con `@Profile("local")` crea, si no existen,
+`admin@`, `medico@` y `paciente@vitsync.test` (activos, con su perfil; el médico con su
+`doctor_profiles`), contraseña `Demostracion-2026`, documentada en CONTRIBUTING. El paciente
+coincide con el del mock del frontend. Fuera de `local` el bean no existe.
+
+### Decisiones
+
+| Decisión | Motivo |
+|---|---|
+| **Resource server de Spring Security** en vez de un filtro JWT propio | Es el filtro Bearer estándar: validación de firma, `alg`, emisor y caducidad ya probada. Un filtro casero es justo el sitio donde se cuelan los fallos |
+| Claves efímeras en `local` y tests | Un PEM privado en el repo haría saltar a gitleaks (con razón). Coste: en local, reiniciar la API obliga a hacer login de nuevo |
+| El login reenvía el código de verificación si ya no sirve | Resuelve el "pendiente" del PR anterior sin un endpoint de reenvío que permitiría enumerar emails: hace falta la contraseña |
+| `/auth/logout` público y solo con la cookie | Se puede cerrar sesión aunque el access token haya caducado |
+| `.gitleaks.toml` con una única excepción: la contraseña demo | Es pública a propósito; cualquier otro secreto sigue rompiendo la CI |
+| `DoctorProfile` entra ya | El médico demo necesita su fila: un `DOCTOR` sin perfil es el fallo de v1 (ADR-0003) |
+| `refresh_tokens.ip_address` (`inet`) sin mapear | No se usa todavía; Hibernate solo valida lo mapeado |
+
+### Comprobado a mano (perfil `local`, Postgres y Mailpit reales)
+
+Login del paciente demo → `200` con cookie; `GET /me` → `200`; registro → email en Mailpit
+con el código → `verify` → `204` → login → `200`. Sin variables de entorno, la app no arranca.
+
+### Tests
+
+| Test | Qué protege |
+|---|---|
+| `JwtKeysTest` (4) | PEM con `\n` literales, claves ausentes, pública que no corresponde, claves cortas o basura sin eco |
+| `AccessTokenServiceTest` (4) | Claims mínimos y 15 min, firma de otra clave, `alg: none`, token caducado |
+| `LoginApiTest` (9, Testcontainers) | Cookie con sus atributos y hash en BD, 401 idéntico, email sin distinguir mayúsculas, no verificado (con y sin reenvío), contraseña incorrecta en cuenta no verificada, suspendida, `/me` con token válido/ausente/manipulado, `PATCH /me` parcial con teléfono cifrado, logout |
+| `DemoUsersSeederTest` (3) y `NoDemoUsersOutsideLocalTest` (1) | Tres usuarios activos con perfil, idempotencia, login del paciente demo, sin seeder fuera de `local` |
+
+### Pendiente
+
+- `POST /api/v1/auth/refresh` con rotación y detección de reuso: PR siguiente (VIT-64).
+- Readiness: Boot marca `health` como `UP` antes de que el seeder termine (corre después del
+  arranque). En local solo importa si se hace login en el primer segundo.
+
+---
+
 ## 2026-11-04 — Outbox de emails y verificación por código (VIT-66 + VIT-62)
 
 ### Contexto

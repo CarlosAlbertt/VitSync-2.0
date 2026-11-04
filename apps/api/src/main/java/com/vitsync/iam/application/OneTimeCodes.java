@@ -63,6 +63,14 @@ class OneTimeCodes {
                 .orElse(OneTimeCode.Check.INVALID);
     }
 
+    /** ¿Hay un código vivo, sin caducar y con intentos restantes? */
+    @Transactional(propagation = Propagation.MANDATORY)
+    boolean hasUsableCode(User user, CodePurpose purpose) {
+        return codes.findByUserIdAndPurposeAndConsumedAtIsNull(user.getId(), purpose)
+                .filter(c -> c.isUsable(clock.instant()))
+                .isPresent();
+    }
+
     private boolean matches(OneTimeCode stored, User user, CodePurpose purpose, String code) {
         return MessageDigest.isEqual(
                 stored.getCodeHash().getBytes(StandardCharsets.US_ASCII),

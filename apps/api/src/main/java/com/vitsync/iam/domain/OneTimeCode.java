@@ -97,4 +97,9 @@ public class OneTimeCode {
         consumedAt = now;
         return Check.VALID;
     }
+
+    /** Sin usar, sin caducar y con intentos restantes. */
+    public boolean isUsable(Instant now) {
+        return consumedAt == null && now.isBefore(expiresAt) && attempts < purpose.maxAttempts();
+    }
 }

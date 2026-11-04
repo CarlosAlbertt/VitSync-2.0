@@ -2,6 +2,10 @@ package com.vitsync.common.config;
 
 
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.core.convert.converter.Converter;
+import org.springframework.security.authentication.AbstractAuthenticationToken;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -16,8 +20,12 @@ import org.springframework.web.servlet.HandlerExceptionResolver;
  * Configuración base de Spring Security.
  *
  * <p>Principio: cerrado por defecto. Todo exige autenticación salvo lo que se abre aquí
- * de forma explícita. El login con JWT llega en la primera slice del Sprint 1; mientras
- * tanto, cualquier ruta protegida responde 401.
+ * de forma explícita.
+ *
+ * <p>Autenticación: <b>JWT RS256 en la cabecera {@code Authorization: Bearer}</b> (ADR-0004).
+ * El filtro Bearer de Spring Security ({@code oauth2ResourceServer().jwt()}) valida firma,
+ * algoritmo, emisor y caducidad con el {@code JwtDecoder} de {@code JwtConfig}, sin tocar la
+ * BD. Un token ausente, caducado o manipulado acaba en el mismo 401 con formato RFC 9457.
  *
  * <p>{@code @EnableMethodSecurity} activa {@code @PreAuthorize} en los métodos, el segundo
  * nivel de autorización de la guía (Fase 6.2).
@@ -32,7 +40,10 @@ public class SecurityConfig {
     // en GlobalExceptionHandler y tienen el mismo formato que el resto.
     @Bean
     SecurityFilterChain api(HttpSecurity http,
-                            @Qualifier("handlerExceptionResolver")HandlerExceptionResolver resolver) throws Exception {
+                            @Qualifier("handlerExceptionResolver") HandlerExceptionResolver resolver,
+                            Converter<Jwt, AbstractAuthenticationToken> jwtAuthenticationConverter) throws Exception {
+        // Sin autenticar o con token inválido -> se pasa la excepción al handler global (401).
+        AuthenticationEntryPoint unauthenticated = (req, res, ex) -> resolver.resolveException(req, res, null, ex);
         http
                 // API sin estado con Bearer: no hay sesión que un CSRF pueda aprovechar.
                 .csrf(AbstractHttpConfigurer::disable)
@@ -51,12 +62,19 @@ public class SecurityConfig {
                         // Autenticación: se llama sin token, por definición. Se abre endpoint
                         // a endpoint y solo con POST; lo que no esté en la lista sigue cerrado.
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/register",
-                                "/api/v1/auth/verify").permitAll()
+                                "/api/v1/auth/verify", "/api/v1/auth/login",
+                                // logout funciona solo con la cookie: así se puede cerrar
+                                // sesión aunque el access token ya haya caducado.
+                                "/api/v1/auth/logout").permitAll()
                         // Todo lo demás, con usuario autenticado.
                         .anyRequest().authenticated())
+                // Bearer JWT. El entry point propio sustituye al de Spring, que respondería un
+                // 401 vacío con WWW-Authenticate: así también estos 401 son ProblemDetail.
+                .oauth2ResourceServer(o -> o
+                        .jwt(j -> j.jwtAuthenticationConverter(jwtAuthenticationConverter))
+                        .authenticationEntryPoint(unauthenticated))
                 .exceptionHandling(e -> e
-                        // Sin autenticar -> se pasa la excepción al handler global (401).
-                        .authenticationEntryPoint((req, res, ex) -> resolver.resolveException(req, res, null, ex))
+                        .authenticationEntryPoint(unauthenticated)
                         .accessDeniedHandler(((request, response, accessDeniedException) -> resolver.resolveException(request, response, null, accessDeniedException)))
                 );
 
