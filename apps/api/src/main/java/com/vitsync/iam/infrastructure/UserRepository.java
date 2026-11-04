@@ -18,4 +18,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByPublicId(UUID publicId);
 
     boolean existsByEmailOrNifHash(String email, String nifHash);
+
+    boolean existsByEmail(String email);
 }

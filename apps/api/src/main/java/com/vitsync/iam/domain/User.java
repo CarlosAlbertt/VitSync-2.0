@@ -118,9 +118,8 @@ public class User {
     private long version;
 
     /**
-     * Alta de un paciente. Es la única forma de crear un {@code User} paciente: nace pendiente
-     * de verificar el email. El {@link PatientProfile} se crea a la vez, en el mismo servicio
-     * transaccional (ADR-0003).
+     * Alta de un paciente. Nace pendiente de verificar el email. El {@link PatientProfile} se
+     * crea a la vez, en el mismo servicio transaccional (ADR-0003).
      *
      * @param email    ya normalizado ({@link Emails#normalize})
      * @param nif      ya normalizado ({@link Nif#normalize}) y validado
@@ -128,11 +127,20 @@ public class User {
      */
     public static User newPatient(String email, String passwordHash, String firstName, String lastName,
                                   String nif, String nifHash, String phone, LocalDate birthDate) {
+        return newAccount(Role.PATIENT, email, passwordHash, firstName, lastName, nif, nifHash, phone, birthDate);
+    }
+
+    /**
+     * Alta de una cuenta de cualquier rol. Para médicos y administradores, quien la crea es
+     * responsable de crear también su perfil en la misma transacción.
+     */
+    public static User newAccount(Role role, String email, String passwordHash, String firstName, String lastName,
+                                  String nif, String nifHash, String phone, LocalDate birthDate) {
         User u = new User();
         u.publicId = UUID.randomUUID();
         u.email = Objects.requireNonNull(email);
         u.passwordHash = Objects.requireNonNull(passwordHash);
-        u.role = Role.PATIENT;
+        u.role = Objects.requireNonNull(role);
         u.status = UserStatus.PENDING_VERIFICATION;
         u.firstName = Objects.requireNonNull(firstName);
         u.lastName = Objects.requireNonNull(lastName);
@@ -149,6 +157,30 @@ public class User {
         if (status == UserStatus.PENDING_VERIFICATION) {
             status = UserStatus.ACTIVE;
             emailVerifiedAt = now;
+        }
+    }
+
+    /** Solo una cuenta activa puede iniciar sesión. */
+    public boolean canLogIn() {
+        return status == UserStatus.ACTIVE && deletedAt == null;
+    }
+
+    /**
+     * Cambios del propio usuario en su perfil ({@code PATCH /me}). {@code null} = sin cambios;
+     * un teléfono vacío lo borra. El email, el NIF y el rol no se cambian por aquí.
+     */
+    public void updateProfile(String firstName, String lastName, String phone, String locale) {
+        if (firstName != null) {
+            this.firstName = firstName.strip();
+        }
+        if (lastName != null) {
+            this.lastName = lastName.strip();
+        }
+        if (phone != null) {
+            this.phone = phone.isBlank() ? null : phone.strip();
+        }
+        if (locale != null) {
+            this.locale = locale;
         }
     }
 

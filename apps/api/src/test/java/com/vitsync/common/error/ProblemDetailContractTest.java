@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.vitsync.common.config.SecurityConfig;
+import com.vitsync.common.security.JwtConfig;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import org.junit.jupiter.api.Test;
@@ -27,12 +28,13 @@ import org.springframework.web.bind.annotation.RestController;
  *
  * <p>{@code @WebMvcTest} levanta solo la capa web (controladores, filtros, advice), sin base
  * de datos: es rápido y no necesita Docker. SecurityConfig se importa a mano porque esta
- * "rebanada" de la aplicación no carga las clases de configuración por su cuenta.
+ * "rebanada" de la aplicación no carga las clases de configuración por su cuenta; JwtConfig,
+ * porque SecurityConfig necesita el decoder y el conversor del JWT (con claves efímeras).
  *
  * <p>El nombre de cada test describe la regla que protege, como pide el ADR-0008.
  */
 @WebMvcTest(controllers = ProblemDetailContractTest.ProbeController.class)
-@Import({SecurityConfig.class, ProblemDetailContractTest.ProbeController.class})
+@Import({SecurityConfig.class, JwtConfig.class, ProblemDetailContractTest.ProbeController.class})
 class ProblemDetailContractTest {
 
     // Cliente HTTP simulado: lanza peticiones contra la app sin servidor real.

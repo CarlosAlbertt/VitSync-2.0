@@ -1,0 +1,14 @@
+# Configuracion de gitleaks (escaneo de secretos en CI).
+#
+# Se parte de las reglas por defecto y solo se anade una excepcion: la contrasena de los
+# usuarios de demostracion del perfil local. Es publica a proposito (esta en CONTRIBUTING y
+# en los mocks del frontend) y solo existe en ese perfil. Cualquier otro valor que parezca un
+# secreto sigue haciendo fallar la CI.
+title = "VitSync gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Public demo credentials of the local profile (see CONTRIBUTING)"
+regexes = ['''Demostracion-2026''']
