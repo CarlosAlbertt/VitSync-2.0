@@ -6,6 +6,65 @@
 
 ---
 
+## 2026-11-04 — Refresh rotativo con detección de reuso (VIT-64)
+
+### Contexto
+
+Paso 5 del plan del Sprint 1: el hueco concreto de v1 según el ADR-0004. Rama
+`feat/VIT-64-refresh-rotation`, apilada sobre `feat/VIT-63-login-jwt`.
+
+### Cambios realizados
+
+**`POST /api/v1/auth/refresh`** (solo con la cookie) → `200 { accessToken, user }` + cookie
+nueva, o `401 INVALID_REFRESH_TOKEN` y la cookie borrada.
+
+| Caso | Reacción |
+|---|---|
+| Token vigente | Se marca canjeado (`revoked_at` + `last_used_at`) y se emite otro de la **misma familia** |
+| Token **ya canjeado** (reuso) | **Se revoca la familia entera** y se registra `REFRESH_TOKEN_REUSE` en `audit_logs` |
+| Token de una sesión cerrada (logout) | 401, **sin** alerta: no se canjeó nunca, no es un robo |
+| Caducado, desconocido o ausente | 401 |
+| Cuenta suspendida o borrada | 401 y se revoca la familia |
+
+- **`SELECT … FOR UPDATE`** sobre la fila del token: dos canjes simultáneos se ponen en fila;
+  el primero rota y el segundo lo ve canjeado (reuso). Probado con 5 peticiones a la vez:
+  exactamente un `200`.
+- La transacción se confirma **antes** de lanzar el 401, para que la revocación de la familia
+  y la entrada de auditoría no se deshagan.
+- El 401 es el mismo en todos los casos: decir "reutilizado" avisaría al atacante de que se le
+  ha detectado.
+
+**`common/audit`**: `AuditLog` (append-only, sin FK al usuario como pide V1) y `AuditTrail`
+(`Propagation.MANDATORY`, copia el `traceId` del MDC). `details` solo lleva hechos
+(`{"reaction":"FAMILY_REVOKED"}`), nunca datos personales.
+
+### Decisiones
+
+| Decisión | Motivo |
+|---|---|
+| Reuso = token **canjeado** presentado otra vez, no "cualquier token revocado" | Si no, cada logout seguido de un reintento del cliente sería una falsa alarma en `audit_logs` |
+| Bloqueo pesimista en vez de optimista | Con `@Version`, el segundo canje fallaría con una excepción genérica; con el bloqueo, ve el estado real y aplica la regla de reuso |
+| Mismo 401 para todo | El cliente solo necesita saber que debe volver a hacer login |
+
+### Tests
+
+`RefreshRotationApiTest` (6, Testcontainers): los dos escenarios Gherkin de SCOPE ("renovación
+normal" y "reuso de un refresh revocado", con su entrada en `audit_logs`), sesión cerrada sin
+alerta, token ausente/desconocido/caducado, cuenta suspendida y **concurrencia** (5 canjes
+simultáneos → un solo `200`). `RefreshTokenTest` (3): vida de 7 días, canjeado frente a
+revocado, recorte del `User-Agent`.
+
+### Pendiente
+
+- **Limpieza de `refresh_tokens` caducados** ("a vigilar" del ADR-0004). Solo se pueden borrar
+  los ya caducados: un token revocado pero vigente tiene que seguir en la tabla para detectar
+  su reuso.
+- El cliente tiene que **serializar los refresh** (una sola promesa compartida): si no, dos
+  pestañas que refrescan a la vez cierran la sesión (ADR-0004). Es la historia "Cliente HTTP
+  tipado con refresh single-flight" del Sprint 2.
+
+---
+
 ## 2026-11-04 — Login con JWT RS256, `/me` y usuarios demo (VIT-63 + VIT-67)
 
 ### Contexto

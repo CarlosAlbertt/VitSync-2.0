@@ -43,7 +43,11 @@ public enum ErrorCode {
     ACCOUNT_NOT_VERIFIED(HttpStatus.FORBIDDEN, "Account not verified",
             "Verify your email before logging in; we have sent you a code"),
     ACCOUNT_DISABLED(HttpStatus.FORBIDDEN, "Account disabled",
-            "This account cannot log in");
+            "This account cannot log in"),
+    // Ausente, caducado, revocado o reutilizado: el cliente solo necesita saber que tiene que
+    // volver a hacer login. Distinguir "reutilizado" avisaría al atacante de que le han visto.
+    INVALID_REFRESH_TOKEN(HttpStatus.UNAUTHORIZED, "Session expired",
+            "The session is no longer valid; log in again");
 
 
     // final: cada constante fija sus valores al crearse y ya no cambian.
