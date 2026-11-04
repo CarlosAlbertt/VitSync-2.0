@@ -6,6 +6,48 @@
 
 ---
 
+## 2026-11-05 — Frontend React con API simulada (VIT-23)
+
+### Contexto
+
+Primer PR del frontend (`apps/web`), rama `feat/VIT-23-web-foundation`. Se adelanta parte
+del Sprint 2: la aplicación entera funciona en el navegador contra una **API simulada con
+MSW**, sin hablar todavía con el backend. Conectarla es el PR siguiente.
+
+### Cambios realizados
+
+- **`apps/web`**: React 19 + TypeScript + Vite. Web pública (portada, cuadro médico,
+  especialidades, contacto), autenticación completa (entrar, registro, verificación,
+  recuperación), reserva de cita y área del paciente. 24 tests (Vitest + Testing Library).
+- **Cliente HTTP** (`shared/api/client.ts`): access token solo en memoria, cookie del refresh
+  con `credentials: "include"` y refresh *single-flight* (una sola llamada a `/auth/refresh`
+  aunque fallen varias peticiones a la vez), como pide el ADR-0004.
+- **Workspace de pnpm** en la raíz (`package.json`, `pnpm-workspace.yaml`, `pnpm-lock.yaml`).
+- **CI**: job `web` (lint, tipos, tests y build). Objetivo `web` en el `Makefile`,
+  `VITE_API_MOCKS` en `.env.example`, y sección de frontend en README y CONTRIBUTING.
+
+### Diferencias de contrato entre el mock y la API real (`master`)
+
+Revisadas al abrir el PR. Se corrigen en el PR de conexión, no en este:
+
+| Punto | Mock | API real | Cómo se resuelve |
+|---|---|---|---|
+| Registro | Sin `nif` | `nif` obligatorio (NIF/NIE con letra) | Añadir el campo al formulario |
+| Recuperación | `password` | `newPassword` | Renombrar en el cliente |
+| Código incorrecto | `INVALID_CODE` | `INVALID_OR_EXPIRED_CODE` | Usar el código de la API |
+| `Me` | `publicId`, `birthDate`, `bloodType`, `allergies`, `emergencyContact` | `id`, `locale`, `emailVerified`; sin datos clínicos | Alinear `Me`; los datos clínicos irán en un endpoint del perfil del paciente |
+| Errores sin mock | — | `TOO_MANY_ATTEMPTS`, `ACCOUNT_DISABLED`, `INVALID_REFRESH_TOKEN` | Mensajes en la UI |
+| Catálogo, citas, informes, etc. | Simulados | **No existen** todavía (Sprint 2 y siguientes) | Esas pantallas siguen con el mock hasta que exista su endpoint |
+
+### Pendiente
+
+- Conectar los flujos de autenticación a la API real (`VITE_API_MOCKS=false`) con un proxy de
+  Vite de `/api` a `localhost:8080`: mismo origen, así la cookie `HttpOnly` funciona sin
+  `SameSite=None` ni CORS.
+- Añadir el check `web` a los obligatorios del ruleset de `master`.
+
+---
+
 ## 2026-11-04 — Recuperación de contraseña por código (VIT-65)
 
 ### Contexto
