@@ -1,0 +1,9 @@
+{
+  "name": "vitsync",
+  "private": true,
+  "packageManager": "pnpm@9.15.9",
+  "scripts": {
+    "web": "pnpm --filter web dev",
+    "web:test": "pnpm --filter web test"
+  }
+}

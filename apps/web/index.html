@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="VitSync: reserva tus citas, consulta tus informes y habla con tu médico, con tus datos de salud protegidos." />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <title>VitSync</title>
+    <script>
+      // Antes de pintar, para que el modo oscuro no parpadee al cargar.
+      try {
+        const saved = localStorage.getItem("vitsync-theme");
+        const dark = saved ? saved === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+        document.documentElement.dataset.theme = dark ? "dark" : "light";
+      } catch {
+        document.documentElement.dataset.theme = "light";
+      }
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
