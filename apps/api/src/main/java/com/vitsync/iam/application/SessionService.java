@@ -1,12 +1,16 @@
 package com.vitsync.iam.application;
 
+import com.vitsync.common.audit.AuditTrail;
 import com.vitsync.common.error.BusinessException;
 import com.vitsync.common.error.ErrorCode;
 import com.vitsync.common.security.AccessTokenService;
 import com.vitsync.iam.domain.Emails;
+import com.vitsync.iam.domain.RefreshToken;
 import com.vitsync.iam.domain.User;
 import com.vitsync.iam.domain.UserStatus;
 import com.vitsync.iam.infrastructure.UserRepository;
+import java.time.Clock;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import org.slf4j.Logger;
@@ -16,7 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * Casos de uso de la sesión: login y logout (VIT-63).
+ * Casos de uso de la sesión: login, refresh rotativo y logout (VIT-63, VIT-64).
  *
  * <p><b>Respuesta uniforme</b> (ADR-0004): email inexistente y contraseña incorrecta devuelven
  * el mismo {@code 401 INVALID_CREDENTIALS} <b>y tardan lo mismo</b>. Si el email no existe se
@@ -36,19 +40,23 @@ public class SessionService {
     private final AccessTokenService accessTokens;
     private final RefreshTokens refreshTokens;
     private final EmailVerificationService verification;
+    private final AuditTrail audit;
     private final TransactionTemplate tx;
+    private final Clock clock;
     // Hash de una contraseña que no es de nadie, con el mismo coste que los reales.
     private final String dummyHash;
 
     public SessionService(UserRepository users, PasswordEncoder passwordEncoder, AccessTokenService accessTokens,
                           RefreshTokens refreshTokens, EmailVerificationService verification,
-                          TransactionTemplate tx) {
+                          AuditTrail audit, TransactionTemplate tx, Clock clock) {
         this.users = users;
         this.passwordEncoder = passwordEncoder;
         this.accessTokens = accessTokens;
         this.refreshTokens = refreshTokens;
         this.verification = verification;
+        this.audit = audit;
         this.tx = tx;
+        this.clock = clock;
         this.dummyHash = passwordEncoder.encode(UUID.randomUUID().toString());
     }
 
@@ -75,6 +83,49 @@ public class SessionService {
         log.info("Login: {}", user.getPublicId());
         return new Session(accessTokens.issue(user.getPublicId(), user.getRole().name()).value(),
                 refresh, MeView.of(user));
+    }
+
+    /**
+     * Canjea un refresh token por una sesión nueva, <b>rotándolo</b> (ADR-0004): el token
+     * presentado queda revocado y se emite otro de la <b>misma familia</b>.
+     *
+     * <p><b>Detección de reuso</b>: si llega un token que ya se canjeó, alguien lo está usando
+     * por segunda vez. Puede ser el atacante que lo robó o el usuario legítimo después del
+     * atacante; desde el servidor no se distinguen, así que se revoca <b>la familia entera</b>
+     * (las dos sesiones caen) y queda en {@code audit_logs}. Es la señal de robo que v1 no
+     * tenía.
+     *
+     * <p>Como en la verificación, la transacción se confirma <b>antes</b> de lanzar el 401: si
+     * la excepción saliera de dentro, se desharía justo la revocación de la familia.
+     */
+    public Session refresh(String refreshToken, String userAgent) {
+        Optional<Session> session = tx.execute(s -> refreshTokens.findForUpdate(refreshToken)
+                .flatMap(token -> rotate(token, userAgent)));
+        return session.orElseThrow(() -> new BusinessException(ErrorCode.INVALID_REFRESH_TOKEN));
+    }
+
+    private Optional<Session> rotate(RefreshToken token, String userAgent) {
+        User user = token.getUser();
+        if (token.wasConsumed()) {
+            refreshTokens.revokeFamily(token.getFamilyId());
+            audit.record("REFRESH_TOKEN_REUSE", user.getPublicId().toString(), "TOKEN_FAMILY",
+                    token.getFamilyId().toString(), false, Map.of("reaction", "FAMILY_REVOKED"));
+            log.warn("Refresh token reuse detected: family {} of {} revoked", token.getFamilyId(), user.getPublicId());
+            return Optional.empty();
+        }
+        if (token.isRevoked() || token.isExpired(clock.instant())) {
+            // Sesión cerrada (logout, familia ya revocada) o caducada: 401 sin más.
+            return Optional.empty();
+        }
+        if (!user.canLogIn()) {
+            // Cuenta suspendida o borrada tras el login: sus sesiones dejan de renovarse.
+            refreshTokens.revokeFamily(token.getFamilyId());
+            return Optional.empty();
+        }
+        token.consume(clock.instant());
+        String next = refreshTokens.issue(user, token.getFamilyId(), userAgent);
+        return Optional.of(new Session(accessTokens.issue(user.getPublicId(), user.getRole().name()).value(),
+                next, MeView.of(user)));
     }
 
     /**

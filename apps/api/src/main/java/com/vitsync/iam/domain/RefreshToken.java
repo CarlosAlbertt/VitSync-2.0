@@ -29,7 +29,7 @@ import org.hibernate.type.SqlTypes;
  * adivinar por fuerza bruta.
  *
  * <p>{@code familyId}: todos los tokens que salen de un mismo login comparten familia. Es lo
- * que permite cortar una sesión robada entera (detección de reuso, PR siguiente).
+ * que permite cortar una sesión robada entera (detección de reuso, ADR-0004).
  *
  * <p>{@code ip_address} (tipo {@code inet}) no se mapea todavía: no se usa, y Hibernate solo
  * valida las columnas mapeadas.
@@ -97,5 +97,20 @@ public class RefreshToken {
         if (revokedAt == null) {
             revokedAt = now;
         }
+    }
+
+    /**
+     * ¿Se canjeó ya? Un token revocado puede estarlo por dos motivos: se rotó (canjeado, con
+     * {@code lastUsedAt}) o se cerró la sesión (logout, familia revocada). Solo presentar uno
+     * <b>ya canjeado</b> es reuso; presentar uno de una sesión cerrada es solo un token viejo.
+     */
+    public boolean wasConsumed() {
+        return revokedAt != null && lastUsedAt != null;
+    }
+
+    /** Canje: el token queda revocado (no vuelve a servir) y se anota cuándo se usó. */
+    public void consume(Instant now) {
+        revoke(now);
+        lastUsedAt = now;
     }
 }

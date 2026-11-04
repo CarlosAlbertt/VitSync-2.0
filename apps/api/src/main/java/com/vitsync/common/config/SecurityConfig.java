@@ -62,7 +62,7 @@ public class SecurityConfig {
                         // Autenticación: se llama sin token, por definición. Se abre endpoint
                         // a endpoint y solo con POST; lo que no esté en la lista sigue cerrado.
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/register",
-                                "/api/v1/auth/verify", "/api/v1/auth/login",
+                                "/api/v1/auth/verify", "/api/v1/auth/login", "/api/v1/auth/refresh",
                                 // logout funciona solo con la cookie: así se puede cerrar
                                 // sesión aunque el access token ya haya caducado.
                                 "/api/v1/auth/logout").permitAll()

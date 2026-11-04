@@ -57,6 +57,12 @@ class RefreshTokens {
         return token == null || token.isBlank() ? Optional.empty() : tokens.findByTokenHash(hash(token));
     }
 
+    /** Busca y bloquea la fila ({@code FOR UPDATE}) para canjearla sin carreras. */
+    @Transactional(propagation = Propagation.MANDATORY)
+    Optional<RefreshToken> findForUpdate(String token) {
+        return token == null || token.isBlank() ? Optional.empty() : tokens.findForUpdate(hash(token));
+    }
+
     @Transactional(propagation = Propagation.MANDATORY)
     void revokeFamily(UUID familyId) {
         tokens.revokeFamily(familyId, clock.instant());

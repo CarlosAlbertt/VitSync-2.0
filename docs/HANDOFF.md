@@ -58,6 +58,8 @@ autenticación descritos en el §5.
   reintentos (Mailpit en local), y `POST /api/v1/auth/verify` con código de un solo uso (V2).
 - **Login (Sprint 1, PR 4)**: JWT RS256 de 15 min, refresh opaco en cookie `HttpOnly`,
   `GET/PATCH /api/v1/me`, logout y usuarios demo en `local` (ver CONTRIBUTING).
+- **Refresh rotativo (Sprint 1, PR 5)**: `POST /api/v1/auth/refresh` con detección de reuso
+  (revoca la familia y lo registra en `audit_logs`).
 - **`master` protegida** con un ruleset: PR obligatorio, CI verde, historial lineal.
 
 ### No hecho todavía
@@ -127,8 +129,7 @@ ver la entrada "Plan del Sprint 1" en [DUDAS_Y_CAMBIOS](DUDAS_Y_CAMBIOS.md).
    2. ~~Registro de pacientes~~ — **PR abierto el 2026-11-04** (VIT-61).
    3. ~~Outbox con su worker y verificación de email~~ — **PR abierto el 2026-11-04** (VIT-66 + VIT-62).
    4. ~~Login JWT RS256 + refresh en cookie, y usuarios demo~~ — **PR abierto el 2026-11-04** (VIT-63 + VIT-67).
-   5. Refresh rotativo con detección de reuso
-      ([ADR-0004](adr/0004-autenticacion-jwt-rs256-con-refresh-rotativo.md)).
+   5. ~~Refresh rotativo con detección de reuso~~ — **PR abierto el 2026-11-04** (VIT-64).
    6. Recuperación de contraseña por código de un solo uso por email.
 
    Fuera de este sprint: 2FA (Sprint 4) y todo el frontend (Sprint 2).

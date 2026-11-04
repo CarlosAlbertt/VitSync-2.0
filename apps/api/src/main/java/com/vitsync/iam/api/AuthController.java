@@ -1,5 +1,6 @@
 package com.vitsync.iam.api;
 
+import com.vitsync.common.error.BusinessException;
 import com.vitsync.iam.api.dto.LoginRequest;
 import com.vitsync.iam.api.dto.RegisterRequest;
 import com.vitsync.iam.api.dto.RegistrationResponse;
@@ -20,6 +21,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -106,6 +108,30 @@ public class AuthController {
                                                  @RequestHeader(value = HttpHeaders.USER_AGENT, required = false)
                                                  @Parameter(hidden = true) String userAgent) {
         return withSession(sessions.login(request.email(), request.password(), userAgent));
+    }
+
+    @PostMapping("/refresh")
+    @Operation(summary = "Rotate the refresh token",
+            description = "Exchanges the refresh cookie for a new access token and a new refresh cookie of the same "
+                    + "family; the presented token is revoked. Presenting an already used token revokes the whole "
+                    + "family (theft signal) and is recorded in audit_logs. Clients must serialize refresh calls.")
+    @ApiResponse(responseCode = "200", description = "Session renewed",
+            headers = @Header(name = HttpHeaders.SET_COOKIE, description = "The new refresh cookie"))
+    @ApiResponse(responseCode = "401", description = "INVALID_REFRESH_TOKEN: missing, expired, revoked or reused; the cookie is cleared",
+            content = @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class)))
+    public ResponseEntity<SessionResponse> refresh(
+            @CookieValue(name = RefreshCookie.NAME, required = false)
+            @Parameter(in = ParameterIn.COOKIE, name = RefreshCookie.NAME, hidden = true) String refreshToken,
+            @RequestHeader(value = HttpHeaders.USER_AGENT, required = false) @Parameter(hidden = true) String userAgent,
+            HttpServletResponse response) {
+        try {
+            return withSession(sessions.refresh(refreshToken, userAgent));
+        } catch (BusinessException e) {
+            // Una cookie que ya no sirve se borra: así el cliente no la reenvía en bucle. La
+            // cabecera se añade antes de que el handler global escriba el ProblemDetail.
+            response.addHeader(HttpHeaders.SET_COOKIE, cookie.clear().toString());
+            throw e;
+        }
     }
 
     @PostMapping("/logout")
