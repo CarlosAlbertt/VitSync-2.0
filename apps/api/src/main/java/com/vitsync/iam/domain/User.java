@@ -184,6 +184,11 @@ public class User {
         }
     }
 
+    /** Contraseña nueva (recuperación). Quien llama revoca las sesiones abiertas. */
+    public void changePassword(String newPasswordHash) {
+        this.passwordHash = Objects.requireNonNull(newPasswordHash);
+    }
+
     public boolean isEmailVerified() {
         return emailVerifiedAt != null;
     }

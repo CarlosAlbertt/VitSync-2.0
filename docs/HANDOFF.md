@@ -20,8 +20,8 @@ el proceso completo de ingeniería que se sigue en una empresa, no solo el produ
 
 ## 2. Estado actual (2026-11-04)
 
-**Sprint 1 en curso.** Hechos el contrato de API y la estructura de módulos (19 tests en
-verde). Alcance del sprint cerrado el 2026-10-22: **solo backend**, seis PR de
+**Sprint 1: backend de autenticación completo en seis PR apilados, pendientes de revisión**
+(131 tests en verde). Alcance del sprint cerrado el 2026-10-22: **solo backend**, seis PR de
 autenticación descritos en el §5.
 
 ### Hecho
@@ -60,6 +60,8 @@ autenticación descritos en el §5.
   `GET/PATCH /api/v1/me`, logout y usuarios demo en `local` (ver CONTRIBUTING).
 - **Refresh rotativo (Sprint 1, PR 5)**: `POST /api/v1/auth/refresh` con detección de reuso
   (revoca la familia y lo registra en `audit_logs`).
+- **Recuperación de contraseña (Sprint 1, PR 6)**: código de un solo uso por email, respuesta
+  idéntica exista o no la cuenta, y cierre de todas las sesiones al cambiarla.
 - **`master` protegida** con un ruleset: PR obligatorio, CI verde, historial lineal.
 
 ### No hecho todavía
@@ -130,7 +132,12 @@ ver la entrada "Plan del Sprint 1" en [DUDAS_Y_CAMBIOS](DUDAS_Y_CAMBIOS.md).
    3. ~~Outbox con su worker y verificación de email~~ — **PR abierto el 2026-11-04** (VIT-66 + VIT-62).
    4. ~~Login JWT RS256 + refresh en cookie, y usuarios demo~~ — **PR abierto el 2026-11-04** (VIT-63 + VIT-67).
    5. ~~Refresh rotativo con detección de reuso~~ — **PR abierto el 2026-11-04** (VIT-64).
-   6. Recuperación de contraseña por código de un solo uso por email.
+   6. ~~Recuperación de contraseña por código de un solo uso por email~~ — **PR abierto el
+      2026-11-04** (VIT-65).
+
+   **Siguiente**: revisar y mergear los seis PR en orden (están apilados) y conectar el
+   frontend a la API real. Pendientes técnicos anotados en DUDAS_Y_CAMBIOS: rate limiting por
+   IP (Bucket4j), limpieza de `refresh_tokens` caducados y readiness tras el seeder demo.
 
    Fuera de este sprint: 2FA (Sprint 4) y todo el frontend (Sprint 2).
 

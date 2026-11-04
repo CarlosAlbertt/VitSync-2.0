@@ -6,6 +6,55 @@
 
 ---
 
+## 2026-11-04 — Recuperación de contraseña por código (VIT-65)
+
+### Contexto
+
+Paso 6 y último del plan del Sprint 1. Rama `feat/VIT-65-password-reset`, apilada sobre
+`feat/VIT-64-refresh-rotation`. Reutiliza la tabla de códigos de V2 (`purpose =
+PASSWORD_RESET`) y el outbox: no hay migración.
+
+### Cambios realizados
+
+| Endpoint | Respuesta |
+|---|---|
+| `POST /api/v1/auth/password-reset/request` `{ email }` | **`202` vacío siempre**, exista o no la cuenta |
+| `POST /api/v1/auth/password-reset` `{ email, code, newPassword }` | `204`; `400 INVALID_OR_EXPIRED_CODE` / `PASSWORD_BREACHED`; `429 TOO_MANY_ATTEMPTS` |
+
+- Solo las cuentas **activas** reciben código (una sin verificar, no: el camino para ella es
+  el login, que reenvía el de verificación).
+- Código de 6 dígitos, **15 minutos**, **5 intentos**, de un solo uso, guardado con HMAC.
+- **Como mucho un email por minuto** aunque se pida varias veces: protege el buzón de quien
+  quiera inundarlo con peticiones a nombre de otro.
+- Con el código correcto: contraseña nueva (misma política y HaveIBeenPwned que el registro),
+  **todas las sesiones revocadas** (todas las familias de refresh) y `PASSWORD_RESET` en
+  `audit_logs`.
+- Una contraseña filtrada se rechaza **antes** de mirar el código: no gasta un intento.
+
+### Decisiones
+
+| Decisión | Motivo |
+|---|---|
+| El hash BCrypt de la contraseña nueva se calcula antes de comprobar el código | El tiempo de respuesta no depende de si el código es válido, y la transacción no espera a BCrypt |
+| Los access tokens ya emitidos no se invalidan | Son sin estado (ADR-0004): caducan solos en 15 minutos. Revocarlos exigiría consultar la BD en cada petición |
+
+### Riesgo conocido
+
+`password-reset/request` hace una escritura más cuando la cuenta existe (código + outbox), así
+que su tiempo de respuesta difiere en unos milisegundos. Medirlo exige muchas peticiones; lo
+que lo corta es el rate limiting por IP (Bucket4j, guía 6.4), pendiente para un sprint
+posterior. La alternativa (encolar siempre y resolver la cuenta en el worker) obligaría a
+`notification` a depender de `iam`, que ArchitectureTest prohíbe con razón.
+
+### Tests
+
+`PasswordResetApiTest` (7, Testcontainers): respuesta idéntica con y sin cuenta, cambio de
+contraseña con cierre de **todas** las sesiones y entrada de auditoría (la vieja deja de
+valer, la nueva entra), código de un solo uso, 5 fallos → 429, contraseña filtrada sin gastar
+el código, un solo email por minuto, y ninguno para cuentas sin verificar.
+
+---
+
 ## 2026-11-04 — Refresh rotativo con detección de reuso (VIT-64)
 
 ### Contexto

@@ -2,6 +2,8 @@ package com.vitsync.iam.api;
 
 import com.vitsync.common.error.BusinessException;
 import com.vitsync.iam.api.dto.LoginRequest;
+import com.vitsync.iam.api.dto.PasswordResetRequest;
+import com.vitsync.iam.api.dto.PasswordResetRequestRequest;
 import com.vitsync.iam.api.dto.RegisterRequest;
 import com.vitsync.iam.api.dto.RegistrationResponse;
 import com.vitsync.iam.api.dto.SessionResponse;
@@ -9,6 +11,7 @@ import com.vitsync.iam.api.dto.VerifyEmailRequest;
 import com.vitsync.iam.api.mapper.AuthMapper;
 import com.vitsync.iam.api.mapper.MeMapper;
 import com.vitsync.iam.application.EmailVerificationService;
+import com.vitsync.iam.application.PasswordResetService;
 import com.vitsync.iam.application.RegistrationService;
 import com.vitsync.iam.application.Session;
 import com.vitsync.iam.application.SessionService;
@@ -51,15 +54,18 @@ public class AuthController {
     private final RegistrationService registration;
     private final EmailVerificationService verification;
     private final SessionService sessions;
+    private final PasswordResetService passwordReset;
     private final AuthMapper mapper;
     private final MeMapper meMapper;
     private final RefreshCookie cookie;
 
     public AuthController(RegistrationService registration, EmailVerificationService verification,
-                          SessionService sessions, AuthMapper mapper, MeMapper meMapper, RefreshCookie cookie) {
+                          SessionService sessions, PasswordResetService passwordReset,
+                          AuthMapper mapper, MeMapper meMapper, RefreshCookie cookie) {
         this.registration = registration;
         this.verification = verification;
         this.sessions = sessions;
+        this.passwordReset = passwordReset;
         this.mapper = mapper;
         this.meMapper = meMapper;
         this.cookie = cookie;
@@ -144,6 +150,30 @@ public class AuthController {
             @Parameter(in = ParameterIn.COOKIE, name = RefreshCookie.NAME, hidden = true) String refreshToken) {
         sessions.logout(refreshToken);
         return ResponseEntity.noContent().header(HttpHeaders.SET_COOKIE, cookie.clear().toString()).build();
+    }
+
+    @PostMapping("/password-reset/request")
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    @Operation(summary = "Request a password reset code",
+            description = "Always 202 with an empty body, whether or not the account exists. If it exists and is "
+                    + "active, a 6-digit code valid for 15 minutes is emailed (at most one per minute).")
+    @ApiResponse(responseCode = "202", description = "Request accepted")
+    public void requestPasswordReset(@Valid @RequestBody PasswordResetRequestRequest request) {
+        passwordReset.requestCode(request.email());
+    }
+
+    @PostMapping("/password-reset")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Operation(summary = "Set a new password with the emailed code",
+            description = "Changes the password and revokes every session (all refresh token families). "
+                    + "Access tokens already issued expire on their own within 15 minutes.")
+    @ApiResponse(responseCode = "204", description = "Password changed; log in again")
+    @ApiResponse(responseCode = "400", description = "VALIDATION_FAILED, PASSWORD_BREACHED or INVALID_OR_EXPIRED_CODE",
+            content = @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class)))
+    @ApiResponse(responseCode = "429", description = "TOO_MANY_ATTEMPTS: the code is burnt; request a new one",
+            content = @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class)))
+    public void resetPassword(@Valid @RequestBody PasswordResetRequest request) {
+        passwordReset.reset(request.email(), request.code(), request.newPassword());
     }
 
     // El refresh va a la cookie; el access token y el usuario, al cuerpo.
