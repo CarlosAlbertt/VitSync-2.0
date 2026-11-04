@@ -52,11 +52,13 @@ autenticación descritos en el §5.
 - **Cifrado base (Sprint 1, PR 1)**: `common/crypto` con AES-256-GCM versionado, blind
   index HMAC-SHA256 y validación de claves al arrancar. Detalle en
   [DUDAS_Y_CAMBIOS](DUDAS_Y_CAMBIOS.md) (2026-11-04).
+- **Registro de pacientes (Sprint 1, PR 2)**: `POST /api/v1/auth/register` con `User` +
+  `PatientProfile`, NIF/NIE validado y cifrado, BCrypt 12 y HaveIBeenPwned sin bloquear.
 - **`master` protegida** con un ruleset: PR obligatorio, CI verde, historial lineal.
 
 ### No hecho todavía
-- **Sin código de dominio**: `apps/api` tiene la base transversal (`common/`: errores,
-  seguridad, OpenAPI, traza) pero ninguna entidad ni endpoint de negocio. No existe
+- **Dominio mínimo**: solo `iam` tiene entidades (`User`, `PatientProfile`); el resto de
+  módulos siguen vacíos. No existe
   `apps/web` (Fase 9).
 - Sin tablero de Jira (guía lista en [JIRA_SETUP.md](JIRA_SETUP.md), falta ejecutarla).
 - Sin licencia (ver [DUDAS_Y_CAMBIOS](DUDAS_Y_CAMBIOS.md), Q7).
@@ -118,9 +120,7 @@ ver la entrada "Plan del Sprint 1" en [DUDAS_Y_CAMBIOS](DUDAS_Y_CAMBIOS.md).
    referencian los módulos entre sí (Q13 en [DUDAS_Y_CAMBIOS](DUDAS_Y_CAMBIOS.md)).
 4. **Autenticación, en seis PR**, por este orden:
    1. ~~Cifrado base (`common/crypto`)~~ — **PR abierto el 2026-11-04** (VIT-71 + VIT-72).
-   2. Registro de pacientes: `User` sin herencia
-      ([ADR-0003](adr/0003-modelo-de-usuario-sin-herencia-jpa.md)), NIF validado,
-      HaveIBeenPwned sin bloquear si cae, 409 sin revelar el campo duplicado.
+   2. ~~Registro de pacientes~~ — **PR abierto el 2026-11-04** (VIT-61).
    3. Outbox con su worker y verificación de email (migración `V2` de códigos de un solo uso).
    4. Login JWT RS256 + refresh en cookie, y usuarios demo del perfil `local`.
    5. Refresh rotativo con detección de reuso

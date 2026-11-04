@@ -6,6 +6,71 @@
 
 ---
 
+## 2026-11-04 — Registro de pacientes (VIT-61)
+
+### Contexto
+
+Paso 2 del plan del Sprint 1. Rama `feat/VIT-61-patient-registration`, apilada sobre
+`feat/VIT-71-encryption-base` (usa `FieldEncryptor` y `BlindIndex`).
+
+### Cambios realizados
+
+**Endpoint**: `POST /api/v1/auth/register` → `201 { email, status: "PENDING_VERIFICATION" }`.
+Público (abierto solo ese endpoint y solo con `POST` en `SecurityConfig`).
+
+**Módulo `iam`**, primeras clases en cada capa:
+
+| Capa | Clases |
+|---|---|
+| `domain` | `User` y `PatientProfile` (sin herencia, `@MapsId`, ADR-0003), `Role`, `UserStatus`, `Nif`, `PasswordPolicy`, `Emails` |
+| `application` | `RegistrationService`, `RegisterPatientCommand`, `RegisteredPatient` |
+| `infrastructure` | `UserRepository`, `PatientProfileRepository`, `BreachedPasswordChecker` + `PwnedPasswordsClient` |
+| `api` | `AuthController`, `RegisterRequest`, `RegistrationResponse`, `AuthMapper` (MapStruct), `@ValidNif`, `@ValidPassword` |
+
+**Reglas que implementa:**
+
+- **NIF/NIE** con letra de control (algoritmo oficial, módulo 23; X/Y/Z → 0/1/2). Se
+  normaliza (sin espacios ni guiones, mayúsculas) antes de cifrarlo y de calcular `nif_hash`.
+- **Contraseña**: 12+ caracteres y **72 bytes como máximo** (límite de BCrypt, contado en
+  UTF-8). Sin reglas de composición, como recomienda NIST SP 800-63B.
+- **HaveIBeenPwned** por k-anonimato (solo viajan 5 caracteres del SHA-1, con
+  `Add-Padding`). Timeout de 2 s y **fallo abierto**: si no responde, aviso en el log y se
+  continúa. En los tests está apagado (`vitsync.hibp.enabled=false`) o simulado.
+- **409 `ACCOUNT_ALREADY_EXISTS`** idéntico para email y NIF duplicados. Comprobación
+  previa + índice único como garantía real ante registros simultáneos (se traduce el
+  `23505` de PostgreSQL; cualquier otra violación sigue siendo un 500).
+- `User` y `PatientProfile` en **una sola transacción** (`TransactionTemplate`). La llamada a
+  HaveIBeenPwned y el hash BCrypt van **fuera**, para no tener una conexión de la BD ocupada
+  mientras se espera a la red.
+
+### Decisiones
+
+| Decisión | Motivo |
+|---|---|
+| **BCrypt coste 12**, no Argon2id | Lo fija el ADR-0004; Argon2 en Spring Security exige BouncyCastle. Envuelto en `DelegatingPasswordEncoder` (`{bcrypt}` delante del hash): migrar a Argon2id más adelante no obliga a nadie a cambiar la contraseña |
+| Coste 4 **solo en tests** (`vitsync.security.bcrypt-cost`) | Con 12, cada registro de un test cuesta ~250 ms sin probar nada más |
+| **MapStruct 1.6.3** entra ahora | Decisión D5. Con `lombok-mapstruct-binding` para que vea los getters de Lombok |
+| Email normalizado en la aplicación aunque la columna sea `citext` | El driver envía `varchar`, y `citext = varchar` compara como texto normal: sin normalizar, `Ana@x.es` y `ana@x.es` podrían no coincidir en una búsqueda |
+| Tests de integración con **contenedor singleton** (`support/IntegrationTest`) | Mitigación que pide el ADR-0008: un PostgreSQL para toda la suite, no uno por clase. Los tests usan datos aleatorios en vez de limpiar la BD |
+| Sin consentimiento RGPD en el registro | Es la historia "Registro de consentimientos versionado" (épica RGPD); no está en el Sprint 1 |
+
+### Tests
+
+| Test | Qué protege |
+|---|---|
+| `NifTest` (20) | DNI y NIE válidos, letra incorrecta, formatos inválidos, normalización |
+| `PasswordPolicyTest` (3) | Mínimo de 12, máximo de 72 bytes en UTF-8, emojis como un carácter |
+| `PwnedPasswordsClientTest` (5) | Solo viaja el prefijo, relleno con recuento 0, fallo abierto ante 5xx y ante timeout |
+| `RegistrationApiTest` (6, Testcontainers) | Alta con perfil, **NIF ilegible en la BD** (`v1:…`, hash = blind index) y legible por la entidad, 409 idéntico por email y por NIF, NIF inválido, contraseña corta y filtrada |
+
+### Pendiente
+
+- La verificación de email llega en el PR siguiente: hasta entonces la cuenta se queda en
+  `PENDING_VERIFICATION`.
+- Limitación de peticiones por IP (Bucket4j, guía 6.4): no está en el alcance del sprint.
+
+---
+
 ## 2026-11-04 — Cifrado base en `common/crypto` (VIT-71 + VIT-72)
 
 ### Contexto

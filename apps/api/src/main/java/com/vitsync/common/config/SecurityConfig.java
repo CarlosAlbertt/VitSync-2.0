@@ -4,6 +4,7 @@ package com.vitsync.common.config;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -47,6 +48,9 @@ public class SecurityConfig {
                         // Públicas: health (para el balanceador/monitorización) y la documentación.
                         .requestMatchers("/actuator/health/**", "/v3/api-docs/**",
                                 "/swagger-ui.html", "/swagger-ui/**").permitAll()
+                        // Autenticación: se llama sin token, por definición. Se abre endpoint
+                        // a endpoint y solo con POST; lo que no esté en la lista sigue cerrado.
+                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/register").permitAll()
                         // Todo lo demás, con usuario autenticado.
                         .anyRequest().authenticated())
                 .exceptionHandling(e -> e
