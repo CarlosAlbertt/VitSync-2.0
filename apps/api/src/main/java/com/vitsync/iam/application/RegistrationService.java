@@ -27,7 +27,7 @@ import org.springframework.transaction.support.TransactionTemplate;
  *       hash BCrypt (~250 ms). Si se hicieran dentro, cada registro tendría una conexión de
  *       la BD ocupada sin hacer nada mientras tanto.
  *   <li><b>Dentro de una transacción</b>: comprobar duplicados, crear {@code User} y
- *       {@code PatientProfile}. Los dos o ninguno: así no puede quedar un paciente sin perfil,
+ *       {@code PatientProfile}, y encolar el email de verificación (outbox). Los dos o ninguno: así no puede quedar un paciente sin perfil,
  *       el fallo de v1 que el ADR-0003 quiere evitar.
  * </ol>
  *
@@ -46,16 +46,19 @@ public class RegistrationService {
     private final PasswordEncoder passwordEncoder;
     private final BreachedPasswordChecker breachedPasswords;
     private final BlindIndex blindIndex;
+    private final EmailVerificationService verification;
     private final TransactionTemplate tx;
 
     public RegistrationService(UserRepository users, PatientProfileRepository profiles,
                                PasswordEncoder passwordEncoder, BreachedPasswordChecker breachedPasswords,
-                               BlindIndex blindIndex, TransactionTemplate tx) {
+                               BlindIndex blindIndex, EmailVerificationService verification,
+                               TransactionTemplate tx) {
         this.users = users;
         this.profiles = profiles;
         this.passwordEncoder = passwordEncoder;
         this.breachedPasswords = breachedPasswords;
         this.blindIndex = blindIndex;
+        this.verification = verification;
         this.tx = tx;
     }
 
@@ -81,6 +84,9 @@ public class RegistrationService {
                         cmd.firstName().strip(), cmd.lastName().strip(), nif, nifHash,
                         blankToNull(cmd.phone()), cmd.birthDate()));
                 profiles.save(PatientProfile.emptyFor(created));
+                // Código + email en el outbox, en esta misma transacción: si el alta se
+                // deshace, no sale ningún email; si se confirma, el email saldrá seguro.
+                verification.sendCode(created);
                 return created;
             });
             // Solo el publicId: ni email ni NIF en los logs.

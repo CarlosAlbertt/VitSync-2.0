@@ -2,7 +2,9 @@ package com.vitsync.iam.api;
 
 import com.vitsync.iam.api.dto.RegisterRequest;
 import com.vitsync.iam.api.dto.RegistrationResponse;
+import com.vitsync.iam.api.dto.VerifyEmailRequest;
 import com.vitsync.iam.api.mapper.AuthMapper;
+import com.vitsync.iam.application.EmailVerificationService;
 import com.vitsync.iam.application.RegistrationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -33,17 +35,21 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
     private final RegistrationService registration;
+    private final EmailVerificationService verification;
     private final AuthMapper mapper;
 
-    public AuthController(RegistrationService registration, AuthMapper mapper) {
+    public AuthController(RegistrationService registration, EmailVerificationService verification,
+                          AuthMapper mapper) {
         this.registration = registration;
+        this.verification = verification;
         this.mapper = mapper;
     }
 
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "Register a patient",
-            description = "Creates the account in PENDING_VERIFICATION, together with its patient profile.")
+            description = "Creates the account in PENDING_VERIFICATION, together with its patient profile, "
+                    + "and emails a 6-digit verification code valid for 10 minutes.")
     @ApiResponse(responseCode = "201", description = "Account created")
     @ApiResponse(responseCode = "400", description = "VALIDATION_FAILED or PASSWORD_BREACHED",
             content = @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class)))
@@ -51,5 +57,18 @@ public class AuthController {
             content = @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class)))
     public RegistrationResponse register(@Valid @RequestBody RegisterRequest request) {
         return mapper.toResponse(registration.register(mapper.toCommand(request)));
+    }
+
+    @PostMapping("/verify")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Operation(summary = "Verify the email with the emailed code",
+            description = "Activates the account. Unknown email, wrong, expired or used code all get the same 400.")
+    @ApiResponse(responseCode = "204", description = "Account active")
+    @ApiResponse(responseCode = "400", description = "VALIDATION_FAILED or INVALID_OR_EXPIRED_CODE",
+            content = @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class)))
+    @ApiResponse(responseCode = "429", description = "TOO_MANY_ATTEMPTS: the code can no longer be used",
+            content = @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class)))
+    public void verify(@Valid @RequestBody VerifyEmailRequest request) {
+        verification.verify(request.email(), request.code());
     }
 }

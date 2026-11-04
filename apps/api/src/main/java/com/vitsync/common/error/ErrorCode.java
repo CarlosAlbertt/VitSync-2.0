@@ -29,7 +29,13 @@ public enum ErrorCode {
     ACCOUNT_ALREADY_EXISTS(HttpStatus.CONFLICT, "Account already exists",
             "An account with these details already exists"),
     PASSWORD_BREACHED(HttpStatus.BAD_REQUEST, "Password breached",
-            "This password has appeared in a data breach; choose a different one");
+            "This password has appeared in a data breach; choose a different one"),
+    // Mismo error para código incorrecto, caducado, ya usado o email desconocido: distinguirlos
+    // diría qué cuentas existen.
+    INVALID_OR_EXPIRED_CODE(HttpStatus.BAD_REQUEST, "Invalid code",
+            "The code is invalid or has expired"),
+    TOO_MANY_ATTEMPTS(HttpStatus.TOO_MANY_REQUESTS, "Too many attempts",
+            "Too many failed attempts; request a new code");
 
 
     // final: cada constante fija sus valores al crearse y ya no cambian.

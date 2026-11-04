@@ -6,6 +6,78 @@
 
 ---
 
+## 2026-11-04 — Outbox de emails y verificación por código (VIT-66 + VIT-62)
+
+### Contexto
+
+Paso 3 del plan del Sprint 1. Rama `feat/VIT-66-outbox-email-verification`, apilada sobre
+`feat/VIT-61-patient-registration`.
+
+### Cambios realizados
+
+**Migración `V2__one_time_codes.sql`**
+
+- Tabla `one_time_codes` (verificación y recuperación, distinguidos por `purpose`): hash del
+  código, caducidad, intentos y `consumed_at`. Índice único parcial: **como mucho un código
+  vivo por usuario y propósito**, garantizado por la BD.
+- `CHECK` en `outbox_messages.status` (`PENDING`, `SENT`, `FAILED`), que V1 no tenía. Se
+  añade con un `ALTER` en V2: V1 no se toca.
+
+**Outbox (módulo `notification`)**
+
+| Pieza | Qué hace |
+|---|---|
+| `EmailOutbox.enqueue` | Inserta el mensaje con `Propagation.MANDATORY`: **exige** la transacción de quien llama, así que el email queda ligado al cambio que lo provoca |
+| Payload | `{"data": "v1:…"}`: destinatario y variables (con el código vigente) **cifrados** con `FieldEncryptor` |
+| `OutboxWorker` | Reserva con `FOR UPDATE SKIP LOCKED`, envía y marca, **un mensaje por transacción**. Backoff 30 s × 2ⁿ con tope de 1 h; `FAILED` tras 8 intentos. Entrega *al menos una vez* |
+| `OutboxScheduler` | `@Scheduled(fixedDelay)` cada 5 s (1 s en `local`). Se apaga con `vitsync.outbox.worker.enabled=false` (tests) |
+| `SmtpEmailSender` | `JavaMailSender`; en `local`, Mailpit (http://localhost:8025) |
+| `EmailTemplate` | Plantillas de texto plano en español: `VERIFY_EMAIL` y `PASSWORD_RESET` |
+
+`last_error` guarda **solo el tipo de excepción**: el mensaje de un error SMTP suele citar el
+destinatario.
+
+**Verificación (módulo `iam`)**
+
+- El registro emite el código y encola el email **en su misma transacción**.
+- `POST /api/v1/auth/verify` `{ email, code }` → `204`; la cuenta pasa a `ACTIVE`.
+- Código de 6 dígitos con `SecureRandom`, vigente 10 minutos, de un solo uso.
+- Guardado como **HMAC con el pepper del blind index** y separación de dominio
+  (`otp:<propósito>:<usuario>:<código>`); comparación en tiempo constante.
+- **10 intentos fallidos → `429 TOO_MANY_ATTEMPTS`**, y desde ahí ni el código correcto sirve.
+  La transacción se confirma **antes** de lanzar el error, para que el intento quede contado.
+- Email inexistente, cuenta ya activa, código incorrecto, caducado o usado: **la misma
+  respuesta** (`400 INVALID_OR_EXPIRED_CODE`).
+
+**Transversal**: `Clock` como bean (`ClockConfig`) para las reglas con tiempo.
+
+### Decisiones
+
+| Decisión | Motivo |
+|---|---|
+| Una tabla de códigos para verificación y recuperación | Misma forma y mismas reglas; el PR de recuperación ya no necesita migración |
+| Hash del código con el pepper del blind index | Un SHA-256 de 6 dígitos se revierte al instante con la BD robada. Reutilizar el pepper con separación de dominio evita un secreto más que custodiar |
+| Payload del outbox cifrado | Contiene un código vigente y el email: ilegible en un volcado, como el resto de datos personales |
+| SMTP genérico (`MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`) en vez de `MAIL_PROVIDER_API_KEY` | El proveedor se decide en el Sprint 8; casi todos aceptan SMTP. `.env.example` actualizado |
+| Límite de intentos por código, no por IP | Cumple el criterio de VIT-62 (429 tras 10 fallos). El rate limiting por IP (Bucket4j, guía 6.4) sigue pendiente |
+
+### Tests
+
+| Test | Qué protege |
+|---|---|
+| `OneTimeCodeTest` (4) | Un solo uso, caducidad, conteo de intentos, código agotado rechazado aunque sea correcto |
+| `OutboxBackoffTest` (1) | Backoff exponencial con tope |
+| `OutboxWorkerTest` (4, Testcontainers) | `MANDATORY` sin transacción falla, payload cifrado, envío → `SENT`, fallo → reintento programado sin datos en `last_error`, último intento → `FAILED` |
+| `EmailVerificationApiTest` (5, Testcontainers) | Registro → email → verificación (el código se saca del email enviado), un solo uso, 10 fallos → 429, caducado, email desconocido, código guardado con hash |
+
+### Pendiente
+
+- **Reenvío del código**: si caduca o se agota, hoy no hay forma de pedir otro. Se resuelve en
+  el PR del login: un login con la contraseña correcta de una cuenta sin verificar emite un
+  código nuevo (sin endpoint extra y sin permitir enumeración).
+
+---
+
 ## 2026-11-04 — Registro de pacientes (VIT-61)
 
 ### Contexto

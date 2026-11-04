@@ -50,7 +50,8 @@ public class SecurityConfig {
                                 "/swagger-ui.html", "/swagger-ui/**").permitAll()
                         // Autenticación: se llama sin token, por definición. Se abre endpoint
                         // a endpoint y solo con POST; lo que no esté en la lista sigue cerrado.
-                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/register").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/register",
+                                "/api/v1/auth/verify").permitAll()
                         // Todo lo demás, con usuario autenticado.
                         .anyRequest().authenticated())
                 .exceptionHandling(e -> e

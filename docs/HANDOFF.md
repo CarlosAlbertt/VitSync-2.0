@@ -54,11 +54,13 @@ autenticación descritos en el §5.
   [DUDAS_Y_CAMBIOS](DUDAS_Y_CAMBIOS.md) (2026-11-04).
 - **Registro de pacientes (Sprint 1, PR 2)**: `POST /api/v1/auth/register` con `User` +
   `PatientProfile`, NIF/NIE validado y cifrado, BCrypt 12 y HaveIBeenPwned sin bloquear.
+- **Outbox y verificación (Sprint 1, PR 3)**: emails por outbox transaccional con worker y
+  reintentos (Mailpit en local), y `POST /api/v1/auth/verify` con código de un solo uso (V2).
 - **`master` protegida** con un ruleset: PR obligatorio, CI verde, historial lineal.
 
 ### No hecho todavía
-- **Dominio mínimo**: solo `iam` tiene entidades (`User`, `PatientProfile`); el resto de
-  módulos siguen vacíos. No existe
+- **Dominio mínimo**: solo `iam` y `notification` tienen entidades; el resto de módulos
+  siguen vacíos. No existe
   `apps/web` (Fase 9).
 - Sin tablero de Jira (guía lista en [JIRA_SETUP.md](JIRA_SETUP.md), falta ejecutarla).
 - Sin licencia (ver [DUDAS_Y_CAMBIOS](DUDAS_Y_CAMBIOS.md), Q7).
@@ -121,7 +123,7 @@ ver la entrada "Plan del Sprint 1" en [DUDAS_Y_CAMBIOS](DUDAS_Y_CAMBIOS.md).
 4. **Autenticación, en seis PR**, por este orden:
    1. ~~Cifrado base (`common/crypto`)~~ — **PR abierto el 2026-11-04** (VIT-71 + VIT-72).
    2. ~~Registro de pacientes~~ — **PR abierto el 2026-11-04** (VIT-61).
-   3. Outbox con su worker y verificación de email (migración `V2` de códigos de un solo uso).
+   3. ~~Outbox con su worker y verificación de email~~ — **PR abierto el 2026-11-04** (VIT-66 + VIT-62).
    4. Login JWT RS256 + refresh en cookie, y usuarios demo del perfil `local`.
    5. Refresh rotativo con detección de reuso
       ([ADR-0004](adr/0004-autenticacion-jwt-rs256-con-refresh-rotativo.md)).
