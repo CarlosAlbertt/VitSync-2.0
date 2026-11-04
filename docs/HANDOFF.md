@@ -2,7 +2,7 @@
 
 > Documento de retoma. Léelo entero antes de tocar nada: en 5 minutos sabes dónde está
 > el proyecto, qué está decidido y cuál es el siguiente paso concreto.
-> Última actualización: **2026-10-22**.
+> Última actualización: **2026-11-04**.
 
 ---
 
@@ -18,7 +18,7 @@ el proceso completo de ingeniería que se sigue en una empresa, no solo el produ
 
 ---
 
-## 2. Estado actual (2026-10-22)
+## 2. Estado actual (2026-11-04)
 
 **Sprint 1 en curso.** Hechos el contrato de API y la estructura de módulos (19 tests en
 verde). Alcance del sprint cerrado el 2026-10-22: **solo backend**, seis PR de
@@ -49,6 +49,9 @@ autenticación descritos en el §5.
 - **Módulos y arquitectura (Sprint 1)**: `iam`, `catalog`, `scheduling`, `clinical`, `gdpr`
   y `notification` bajo `com.vitsync`, con `ArchitectureTest` (ArchUnit) haciendo cumplir
   capas y fronteras entre módulos. Detalle en [DUDAS_Y_CAMBIOS](DUDAS_Y_CAMBIOS.md) (2026-10-22).
+- **Cifrado base (Sprint 1, PR 1)**: `common/crypto` con AES-256-GCM versionado, blind
+  index HMAC-SHA256 y validación de claves al arrancar. Detalle en
+  [DUDAS_Y_CAMBIOS](DUDAS_Y_CAMBIOS.md) (2026-11-04).
 - **`master` protegida** con un ruleset: PR obligatorio, CI verde, historial lineal.
 
 ### No hecho todavía
@@ -114,8 +117,7 @@ ver la entrada "Plan del Sprint 1" en [DUDAS_Y_CAMBIOS](DUDAS_Y_CAMBIOS.md).
    `ArchitectureTest`. Antes de la slice de citas hay que cerrar con un ADR cómo se
    referencian los módulos entre sí (Q13 en [DUDAS_Y_CAMBIOS](DUDAS_Y_CAMBIOS.md)).
 4. **Autenticación, en seis PR**, por este orden:
-   1. Cifrado base (`common/crypto`): AES-256-GCM con prefijo de versión y blind index
-      ([ADR-0005](adr/0005-cifrado-en-reposo-y-blind-index.md)).
+   1. ~~Cifrado base (`common/crypto`)~~ — **PR abierto el 2026-11-04** (VIT-71 + VIT-72).
    2. Registro de pacientes: `User` sin herencia
       ([ADR-0003](adr/0003-modelo-de-usuario-sin-herencia-jpa.md)), NIF validado,
       HaveIBeenPwned sin bloquear si cae, 409 sin revelar el campo duplicado.
