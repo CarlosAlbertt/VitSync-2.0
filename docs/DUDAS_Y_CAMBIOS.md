@@ -6,6 +6,68 @@
 
 ---
 
+## 2026-11-04 — Cifrado base en `common/crypto` (VIT-71 + VIT-72)
+
+### Contexto
+
+Primer PR del Sprint 1 (paso 1 del plan): el registro va a guardar el NIF cifrado y su
+blind index, así que el cifrado tiene que existir antes. Rama `feat/VIT-71-encryption-base`.
+Implementa [ADR-0005](adr/0005-cifrado-en-reposo-y-blind-index.md) sin cambiar ninguna
+decisión.
+
+### Cambios realizados
+
+Paquete `com.vitsync.common.crypto`:
+
+| Clase | Qué hace |
+|---|---|
+| `FieldEncryptor` | AES-256-GCM, IV aleatorio de 12 bytes, tag de 128 bits. Guarda `v<n>:` + base64(iv‖cifrado). Descifra cualquier versión conocida; `needsRotation(stored)` dice si hay que recifrar |
+| `KeyRing` | Clave actual + anteriores. Valida al arrancar: 32 bytes en base64, versión `v\d+`, sin versiones duplicadas, y rechaza la clave a cero salvo con `allow-insecure-dev-key=true` |
+| `BlindIndex` | HMAC-SHA256 en hex (64 caracteres) del valor con `trim` y mayúsculas. Pepper de 32+ caracteres |
+| `EncryptedStringConverter` | `AttributeConverter` con inyección por constructor (Hibernate pide los conversores a Spring) |
+| `CryptoProperties` | `vitsync.crypto.*`: `key`, `key-version`, `blind-index-pepper`, `previous-keys.<v>`, `allow-insecure-dev-key` |
+| `CryptoConfig` | Registra los beans. Si una validación falla, **la aplicación no arranca** |
+| `EncryptionException` | No comprobada. Su mensaje nombra la propiedad que falla, nunca el valor |
+
+Configuración:
+
+- `application.properties`: `${ENCRYPTION_KEY}`, `${ENCRYPTION_KEY_VERSION}` y
+  `${BLIND_INDEX_PEPPER}`, sin valores por defecto.
+- Perfil `local` y tests: clave de 32 bytes a cero y un pepper sin entropía, públicos a
+  propósito (gitleaks no los marca y nadie los confunde con un secreto).
+- Los valores de test van en `src/test/resources/config/application.properties`: un
+  `application.properties` en la raíz de `test/resources` **taparía** el de `src/main`.
+
+### Decisiones menores (sin ADR)
+
+| Decisión | Motivo |
+|---|---|
+| La versión (`v1`) entra como **AAD** de GCM | Si alguien cambia el prefijo en la BD, el tag deja de cuadrar. Coste cero |
+| Las claves anteriores se configuran como `VITSYNC_CRYPTO_PREVIOUS_KEYS_V<n>` | Es el *relaxed binding* de Spring para un mapa; no hace falta otra variable con formato propio |
+| `KeyRing` borra el array de bytes tras crear la clave | `SecretKeySpec` hace una copia: el original no tiene por qué quedarse en memoria |
+| `toString()` propio en `CryptoProperties` y `KeyRing` | El de un record imprime todos sus campos, y los `toString()` acaban en los logs |
+| Las clases de cifrado no llevan anotaciones de Spring | Se prueban con un `new`, sin contexto; los beans se crean en `CryptoConfig` |
+
+### Tests
+
+`FieldEncryptorTest` (10), `BlindIndexTest` (5) y `KeyRingTest` (8), sin Spring:
+ida y vuelta, prefijo de versión, cifrados distintos para el mismo valor, manipulación
+detectada, prefijo autenticado, versión anterior descifrable, versión desconocida,
+normalización del blind index y cada validación de `KeyRing`. `CryptoConfigTest` (4) usa
+`ApplicationContextRunner`: arranca con configuración válida y falla sin clave, sin pepper o
+con la clave de desarrollo no permitida.
+
+`./mvnw verify` → **46 tests en verde**.
+
+### Dejado fuera a propósito
+
+- **"El NIF es ilegible en la BD"**: se prueba en el PR del registro, con la entidad `User`.
+  Hibernate valida el esquema y no admite una entidad de prueba sin tabla.
+- **Tarea de recifrado tras una rotación**: `needsRotation` ya existe; el proceso que la usa
+  entra cuando haya datos que rotar.
+
+---
+
 ## 2026-10-22 — Plan del Sprint 1: ocho decisiones antes de programar
 
 ### Contexto
