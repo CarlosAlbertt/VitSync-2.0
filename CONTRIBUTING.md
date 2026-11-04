@@ -14,7 +14,7 @@ comprueba y lo que se revisa en cada PR.
 |---|---|---|
 | JDK | 21 (LTS) | Backend |
 | Docker | cualquiera reciente | `docker compose` y **Testcontainers** |
-| Node + pnpm | Node 22, pnpm 9 | Frontend (a partir de la Fase 9) |
+| Node + pnpm | Node 22 o superior, pnpm 9 (viene con `corepack`) | Frontend |
 
 Maven no hace falta instalarlo: el repositorio trae el wrapper (`./mvnw`).
 
@@ -83,6 +83,17 @@ docker compose up -d
 cd apps/api && ./mvnw spring-boot:run -Dspring-boot.run.profiles=local
 ```
 
+### Frontend
+
+```bash
+corepack pnpm install
+corepack pnpm --filter web dev      # http://localhost:5173
+```
+
+No necesita el backend: en desarrollo, la API la simula MSW con la forma del contrato
+(`apps/web/src/test/mocks`). En la pantalla de acceso hay un botón para entrar con la cuenta
+de demostración; el código de verificación de la demo es `123456`.
+
 ## 3. Idioma
 
 | Qué | Idioma |
@@ -99,9 +110,9 @@ v1 mezclaba los dos y lo parcheaba con anotaciones de mapeo. Aquí la frontera e
 
 ```
 master
-feat/VIT-12-appointment-booking
-fix/VIT-31-refresh-rotation
-chore/VIT-40-bump-spring
+feat/VIT-71-encryption-base
+fix/VIT-64-refresh-rotation
+chore/VIT-31-bump-spring
 ```
 
 **Conventional Commits**, en inglés y en imperativo:

@@ -49,6 +49,30 @@ jobs:
           path: apps/api/target/surefire-reports/
           retention-days: 7
 
+  web:
+    name: web (lint, tipos, tests y build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm --filter web lint
+
+      - name: Tests
+        run: pnpm --filter web test
+
+      - name: Tipos y build
+        run: pnpm --filter web build
+
   secrets:
     name: escaneo de secretos
     runs-on: ubuntu-latest

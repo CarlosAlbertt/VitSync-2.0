@@ -19,13 +19,13 @@ después el código. Toda la ingeniería está descrita en la
 
 | | |
 |---|---|
-| Fase actual | **Sprint 0 cerrado** → siguiente: Fase 3, contrato de API |
-| Código de producto | Aún no: esqueleto, esquema y entorno |
+| Fase actual | **Sprint 1 en curso**: autenticación, con la interfaz adelantada |
+| Código de producto | Frontend contra API simulada; backend sin endpoints de negocio |
 | Base de datos | Flyway con el esquema base (19 tablas) ✅ |
 | Entorno local | `docker compose up -d` → Postgres + MinIO + Mailpit ✅ |
-| Tests | `./mvnw verify` en verde, con Testcontainers ✅ |
+| Tests | `./mvnw verify` con Testcontainers y Vitest en `apps/web` ✅ |
 | Decisiones | Los 8 ADRs escritos ([docs/adr](docs/adr)) ✅ |
-| Gestión | Backlog listo para volcar a Jira ([guía](docs/JIRA_SETUP.md)) |
+| Gestión | Jira, proyecto `VIT` |
 
 Para retomar el trabajo en cualquier momento: **[docs/HANDOFF.md](docs/HANDOFF.md)**.
 
@@ -44,6 +44,15 @@ Sin variables de entorno: el perfil `local` ya apunta al compose. PostgreSQL se 
 el **5433** del host para no chocar con un PostgreSQL instalado en la máquina. Detalle
 completo en [CONTRIBUTING.md](CONTRIBUTING.md).
 
+La interfaz se puede ver sin backend ni Docker, con una API simulada. Requisito: **Node 22**.
+
+```bash
+corepack pnpm install
+corepack pnpm --filter web dev                                   # http://localhost:5173
+```
+
+Cuenta de demostración: `paciente@vitsync.test` / `Demostracion-2026`.
+
 ---
 
 ## Stack objetivo
@@ -60,7 +69,7 @@ completo en [CONTRIBUTING.md](CONTRIBUTING.md).
 | Frontend | **React 19 + TypeScript + Vite 7** | Sustituye a Vue 3 |
 | Estado | TanStack Query (servidor) + Zustand (UI) | v1 usaba stores caseros |
 | Formularios | React Hook Form + Zod | Esquema compartido con los tipos generados |
-| Estilos | Tailwind 4 + shadcn/ui | Tailwind se mantiene |
+| Estilos | Tailwind 4 (shadcn/ui por decidir: Q14) | Tailwind se mantiene |
 | Tests | JUnit 5 + Testcontainers · Vitest + Testing Library + MSW · Playwright | v1 testeaba con H2 |
 | CI/CD | GitHub Actions (lint, tests, migraciones, gitleaks, drift de OpenAPI) | Nuevo |
 
@@ -76,7 +85,7 @@ vitsync-2.0/
 ├── apps/
 │   ├── api/          Spring Boot (Maven)          ← esqueleto + esquema
 │   │   └── src/main/resources/db/migration/       Migraciones Flyway
-│   └── web/          React + Vite (pnpm)          ← Fase 9, aún no existe
+│   └── web/          React + Vite (pnpm)          ← interfaz con API simulada
 ├── docs/
 │   ├── GUIA_CONSTRUCCION.md   Guía completa de las 12 fases
 │   ├── HANDOFF.md             Punto de retoma del trabajo

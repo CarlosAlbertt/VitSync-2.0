@@ -1,0 +1,181 @@
+@import "tailwindcss";
+
+@source "../";
+
+/* Fuente empaquetada con la app: datos de salud y RGPD, así que nada de pedirla a un tercero. */
+@import "@fontsource-variable/figtree/index.css";
+
+/* Tokens de diseño. El tema se cambia con data-theme en <html>; ver index.html.
+   Paleta "tinta y menta": neutros y un solo color de acción. El color lo ponen el logo y las ilustraciones.
+   Para probar otra paleta basta con cambiar estos valores. */
+:root {
+  --canvas: #fafafa;
+  --subtle: #f1f3f2;
+  --raised: #ffffff;
+  --ink: #16201f;
+  --ink-soft: #566160;
+  --line: #e4e7e6;
+  --accent: #16201f;
+  --accent-strong: #000000;
+  --accent-ink: #ffffff;
+  --accent-wash: #dcf3ee;
+  --brand: #16201f;
+  --danger: #b3261e;
+  --success: #1b6e43;
+  --success-wash: #e3f4ea;
+  --warning: #8a5300;
+  --warning-wash: #fbf0dc;
+  --danger-wash: #fbe7e5;
+
+  /* Series de las gráficas (paleta validada para daltonismo, ver la skill de dataviz). */
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+}
+
+:root[data-theme="dark"] {
+  --canvas: #0f1413;
+  --subtle: #1f2725;
+  --raised: #171d1c;
+  --ink: #f2f5f4;
+  --ink-soft: #a7b1af;
+  --line: #2b3331;
+  --accent: #f2f5f4;
+  --accent-strong: #ffffff;
+  --accent-ink: #16201f;
+  --accent-wash: #1f3a36;
+  --brand: #1f2a28;
+  --danger: #ffb0a3;
+  --success: #8fe0b4;
+  --success-wash: #173527;
+  --warning: #f2c46d;
+  --warning-wash: #3a2e14;
+  --danger-wash: #3d1f1c;
+
+  --series-1: #3987e5;
+  --series-2: #d95926;
+}
+
+@theme inline {
+  --color-canvas: var(--canvas);
+  --color-subtle: var(--subtle);
+  --color-raised: var(--raised);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-wash: var(--accent-wash);
+  --color-brand: var(--brand);
+  --color-danger: var(--danger);
+  --color-success: var(--success);
+  --color-success-wash: var(--success-wash);
+  --color-warning: var(--warning);
+  --color-warning-wash: var(--warning-wash);
+  --color-danger-wash: var(--danger-wash);
+
+  --font-sans: "Figtree Variable", system-ui, sans-serif;
+}
+
+@layer base {
+  html {
+    background: var(--canvas);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    color-scheme: light;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+  }
+
+  h1,
+  h2,
+  h3 {
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background: var(--accent);
+    color: var(--accent-ink);
+  }
+}
+
+@layer components {
+  .card {
+    background: var(--raised);
+    border: 1px solid var(--line);
+    border-radius: 2rem;
+  }
+
+  .tile {
+    background: var(--raised);
+    border: 1px solid var(--line);
+    transition:
+      background-color 150ms ease,
+      border-color 150ms ease;
+  }
+
+  .tile:hover {
+    background: var(--accent-wash);
+    border-color: var(--accent);
+  }
+
+  /* Tarjeta que lleva a otra pantalla. */
+  .lift {
+    transition: border-color 150ms ease;
+  }
+
+  .lift:hover {
+    border-color: var(--accent);
+  }
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+}
+
+@keyframes appear {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.appear {
+  animation: appear 0.25s ease-out both;
+}
+
+.skeleton {
+  background: var(--line);
+  border-radius: 0.75rem;
+  animation: pulse-soft 1.4s ease-in-out infinite;
+}
+
+@keyframes pulse-soft {
+  50% {
+    opacity: 0.5;
+  }
+}
+
+dialog::backdrop {
+  background: rgb(8 20 17 / 0.5);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .appear,
+  .skeleton {
+    animation: none;
+  }
+}
