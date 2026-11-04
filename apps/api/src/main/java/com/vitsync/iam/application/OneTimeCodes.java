@@ -9,6 +9,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.time.Clock;
+import java.time.Duration;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -68,6 +69,14 @@ class OneTimeCodes {
     boolean hasUsableCode(User user, CodePurpose purpose) {
         return codes.findByUserIdAndPurposeAndConsumedAtIsNull(user.getId(), purpose)
                 .filter(c -> c.isUsable(clock.instant()))
+                .isPresent();
+    }
+
+    /** ¿Se emitió un código vivo hace menos de {@code window}? */
+    @Transactional(propagation = Propagation.MANDATORY)
+    boolean issuedRecently(User user, CodePurpose purpose, Duration window) {
+        return codes.findByUserIdAndPurposeAndConsumedAtIsNull(user.getId(), purpose)
+                .filter(c -> c.issuedWithin(window, clock.instant()))
                 .isPresent();
     }
 

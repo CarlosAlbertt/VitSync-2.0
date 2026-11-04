@@ -8,6 +8,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Objects;
 import lombok.AccessLevel;
@@ -101,5 +102,10 @@ public class OneTimeCode {
     /** Sin usar, sin caducar y con intentos restantes. */
     public boolean isUsable(Instant now) {
         return consumedAt == null && now.isBefore(expiresAt) && attempts < purpose.maxAttempts();
+    }
+
+    /** ¿Se emitió hace menos de {@code window}? Para no reenviar emails en ráfaga. */
+    public boolean issuedWithin(Duration window, Instant now) {
+        return createdAt != null && now.isBefore(createdAt.plus(window));
     }
 }
