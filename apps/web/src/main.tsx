@@ -5,9 +5,9 @@ import { env } from "@/shared/config/env";
 import "@/app/styles.css";
 
 async function start() {
-  if (env.VITE_API_MOCKS === "true") {
-    const { worker } = await import("@/test/mocks/browser");
-    await worker.start({ onUnhandledRequest: "bypass", quiet: true });
+  if (env.VITE_API_MOCKS !== "none") {
+    const { startMocks } = await import("@/test/mocks/browser");
+    await startMocks(env.VITE_API_MOCKS);
   }
 
   createRoot(document.getElementById("root")!).render(

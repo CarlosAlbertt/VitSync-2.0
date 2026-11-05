@@ -26,10 +26,16 @@ describe("registerSchema", () => {
     expect(registerSchema.safeParse(valid).success).toBe(true);
   });
 
-  it("exige 12 caracteres, mayúscula, número y símbolo", () => {
-    for (const password of ["Corta-1", "sinmayuscula-12", "SinNumero-Largo", "SinSimbolo12345"]) {
-      expect(registerSchema.safeParse({ ...valid, password }).success).toBe(false);
-    }
+  // La misma regla que el backend: longitud, no composición.
+  it("exige 12 caracteres como mínimo y acepta una frase sin símbolos", () => {
+    expect(registerSchema.safeParse({ ...valid, password: "Corta-1" }).success).toBe(false);
+    expect(registerSchema.safeParse({ ...valid, password: "una frase bastante larga" }).success).toBe(true);
+  });
+
+  it("rechaza más de 72 bytes, el límite de BCrypt, aunque sean menos caracteres", () => {
+    // "ñ" ocupa 2 bytes en UTF-8: 40 caracteres son 80 bytes.
+    expect(registerSchema.safeParse({ ...valid, password: "ñ".repeat(40) }).success).toBe(false);
+    expect(registerSchema.safeParse({ ...valid, password: "ñ".repeat(36) }).success).toBe(true);
   });
 
   it("no acepta una fecha futura", () => {

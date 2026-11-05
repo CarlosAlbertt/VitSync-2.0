@@ -1,8 +1,10 @@
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { http, HttpResponse } from "msw";
 import { describe, expect, it } from "vitest";
 import { DEMO_CODE, DEMO_EMAIL } from "@/test/mocks/data";
 import { renderRoutes } from "@/test/render";
+import { server } from "@/test/setup";
 import { RegisterPage } from "./RegisterPage";
 import { VerifyPage } from "./VerifyPage";
 
@@ -34,6 +36,29 @@ describe("RegisterPage", () => {
     await user.click(screen.getByRole("button", { name: "Verificar" }));
 
     expect(await screen.findByText("Pantalla de acceso")).toBeInTheDocument();
+  });
+
+  it("envía el cuerpo que pide el contrato: NIF normalizado y sin el consentimiento", async () => {
+    let body: unknown;
+    server.use(
+      http.post("*/api/v1/auth/register", async ({ request }) => {
+        body = await request.json();
+        return HttpResponse.json({ email: "nueva@vitsync.test", status: "PENDING_VERIFICATION" }, { status: 201 });
+      }),
+    );
+    renderRoutes(routes, "/registro");
+
+    await fillForm({ nif: "x1234567l" });
+
+    expect(await screen.findByLabelText("Código")).toBeInTheDocument();
+    expect(body).toEqual({
+      firstName: "Lucía",
+      lastName: "Ferrer",
+      nif: "X1234567L",
+      birthDate: "1991-03-14",
+      email: "nueva@vitsync.test",
+      password: "Contraseña-Larga-1",
+    });
   });
 
   it("marca un NIF con la letra incorrecta sin llamar a la API", async () => {

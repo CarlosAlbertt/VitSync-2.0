@@ -1,7 +1,6 @@
 import { Download, FileText, Syringe, TriangleAlert } from "lucide-react";
 import { Link } from "react-router";
-import { useSession } from "@/shared/api/session";
-import { allergies, conditions, encounters, familyHistory, habits, HEIGHT_LABEL, HEIGHT_M, medications, surgeries, vaccines, type VaccineStatus, vitals } from "@/shared/demo/patient";
+import { allergies, clinicalProfile, conditions, encounters, familyHistory, habits, HEIGHT_LABEL, HEIGHT_M, medications, surgeries, vaccines, type VaccineStatus, vitals } from "@/shared/demo/patient";
 import { demo } from "@/shared/lib/demo";
 import { formatDate, formatNumber } from "@/shared/lib/format";
 import { Badge, type Tone } from "@/shared/ui/badge";
@@ -12,7 +11,6 @@ const CONDITION_TONE: Record<string, Tone> = { "En tratamiento": "info", Control
 const VACCINE: Record<VaccineStatus, [string, Tone]> = { done: ["Puesta", "success"], pending: ["Pendiente", "warning"], scheduled: ["Con cita", "info"] };
 
 export function HistoryPage() {
-  const user = useSession((s) => s.user);
   const weight = vitals.weight[vitals.weight.length - 1]!.value;
   const bmi = weight / HEIGHT_M ** 2;
   const chronic = medications.filter((m) => m.times.length > 0);
@@ -119,10 +117,10 @@ export function HistoryPage() {
             <p className="mt-1 text-sm">Lo que necesita saber quien te atienda en una urgencia.</p>
             <dl className="mt-4 grid gap-3">
               {[
-                ["Grupo sanguíneo", user?.bloodType ?? "Sin indicar"],
+                ["Grupo sanguíneo", clinicalProfile.bloodType],
                 ["Alergias", allergies.map((a) => a.name).join(", ")],
                 ["Medicación habitual", chronic.map((m) => `${m.name} ${m.dose}`).join(", ")],
-                ["Contacto de emergencia", user?.emergencyContact ?? "Sin indicar"],
+                ["Contacto de emergencia", clinicalProfile.emergencyContact],
               ].map(([term, value]) => (
                 <div key={term} className="rounded-2xl bg-white/10 p-3">
                   <dt className="text-xs font-semibold">{term}</dt>

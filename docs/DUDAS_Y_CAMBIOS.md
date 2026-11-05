@@ -6,6 +6,55 @@
 
 ---
 
+## 2026-11-05 — Autenticación del frontend contra la API real (VIT-108)
+
+### Contexto
+
+El PR del frontend (#11) dejó anotadas las diferencias entre su API simulada y la real. Este PR
+las corrige y conecta la identidad (registro, verificación, acceso, sesión, recuperación y Mis
+datos) con el backend. Rama `feat/VIT-108-web-real-auth`.
+
+### Cambios realizados
+
+- **Modo API**: `pnpm dev:api` (`vite --mode api`). Un proxy de Vite manda `/api` a
+  `localhost:8080`, así el navegador ve un único origen: la cookie del refresh (`SameSite=Lax`,
+  `Path=/api/v1/auth`) funciona sin CORS ni `SameSite=None`.
+- **`VITE_API_MOCKS`** pasa de `true/false` a `all`, `missing` y `none`. En `missing`, MSW solo
+  responde lo que el backend aún no tiene y deja pasar `/auth` y `/me`. Los datos simulados
+  aceptan el JWT real y devuelven los de la paciente de demostración.
+- **Contrato alineado**: `Me` con la forma de la API (`id`, `role`, `locale`, `emailVerified`,
+  sin datos clínicos); el registro envía el NIF normalizado y no el consentimiento;
+  `newPassword` en la recuperación; mensajes para `INVALID_OR_EXPIRED_CODE`,
+  `TOO_MANY_ATTEMPTS`, `ACCOUNT_DISABLED` e `INVALID_REFRESH_TOKEN`.
+- **Contraseña**: la misma regla que el backend (12 caracteres o más, máximo 72 bytes), sin
+  exigir mayúscula, número ni símbolo.
+- **API simulada**: reproduce la real en identidad, incluidos el 409 sin revelar campo, el
+  código quemado tras 10 o 5 fallos y el cierre de sesiones al cambiar la contraseña.
+- **Mis datos**: nombre, apellidos, teléfono e idioma se guardan con `PATCH /api/v1/me`.
+  Identificación y datos de salud se muestran con la etiqueta «Ejemplo»: la API aún no los
+  devuelve.
+- **Tests**: 28 (antes 24). Nuevos: cuerpo exacto del registro y recuperación con `newPassword`
+  y con el código quemado.
+
+### Verificación de punta a punta
+
+Con `docker compose up -d`, el backend en perfil `local` y `pnpm dev:api`, un navegador
+automatizado recorrió: registro (201), código desde Mailpit, verificación (204), acceso (200),
+recarga con la sesión recuperada por la cookie (refresh 200), `PATCH /me` (200), cierre de sesión
+(204, después el panel pide entrar), recuperación con el código de Mailpit (202 y 204), error
+genérico con la contraseña antigua (401) y acceso con la nueva.
+
+### Deuda consciente
+
+- **Datos clínicos del paciente** (fecha de nacimiento, NIF, grupo sanguíneo, alergias,
+  contacto de emergencia): sin endpoint. Mis datos, Historial y el resumen de emergencia los
+  muestran de ejemplo (`shared/demo/patient.ts`).
+- **Roles**: médico y administrador entran al mismo área del paciente; las vistas por rol
+  llegarán con sus funcionalidades.
+- Los tipos siguen escritos a mano; generarlos de `docs/openapi.json` (D10) queda pendiente.
+
+---
+
 ## 2026-11-05 — Frontend React con API simulada (VIT-23)
 
 ### Contexto

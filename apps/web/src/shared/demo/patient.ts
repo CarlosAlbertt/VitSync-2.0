@@ -298,3 +298,15 @@ export const accessLog = [
   { who: "Inés Soler Martí", role: "Medicina familiar", what: "Consultó tu analítica", at: at(-3, 10, 2) },
   { who: "Carmen Ibars Lluch", role: "Análisis clínicos", what: "Publicó un resultado", at: "2026-09-22T11:30:00.000Z" },
 ];
+
+// ─── Identificación y datos clínicos ────────────────────────────────────────
+// /api/v1/me no los devuelve: llegarán con el módulo clínico (cifrados, ADR-0005).
+
+export const clinicalProfile = {
+  nif: "•••••678Z",
+  birthDate: "1991-03-14",
+  healthCard: "VLCN 0000 0000 00",
+  bloodType: "A+",
+  allergies: "Penicilina",
+  emergencyContact: "Marcos Ferrer · +34 600 000 001",
+};

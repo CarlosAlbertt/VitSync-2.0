@@ -13,7 +13,7 @@ import { TextField } from "@/shared/ui/field";
 import { AuthCard } from "./AuthCard";
 import { loginSchema, type LoginInput } from "./schemas";
 
-// Solo con la API simulada: en un entorno real, estas credenciales no existen.
+// Solo en desarrollo: existen en la API simulada y entre los usuarios demo del perfil local del backend.
 const DEMO = { email: "paciente@vitsync.test", password: "Demostracion-2026" };
 
 export function LoginPage() {
@@ -41,7 +41,7 @@ export function LoginPage() {
           <FormError>
             {errorMessage(login.error)}{" "}
             {hasCode(login.error, "ACCOUNT_NOT_VERIFIED") && (
-              <Link to="/verificar" className="underline">
+              <Link to="/verificar" state={{ email: login.variables?.email }} className="underline">
                 Verificar ahora
               </Link>
             )}
@@ -57,7 +57,7 @@ export function LoginPage() {
         </Button>
       </form>
 
-      {env.VITE_API_MOCKS === "true" && (
+      {env.VITE_API_MOCKS !== "none" && (
         <Button variant="soft" className="mt-3 w-full" disabled={login.isPending} onClick={() => login.mutate(DEMO)}>
           Usar cuenta de demostración
         </Button>

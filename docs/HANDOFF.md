@@ -20,9 +20,10 @@ el proceso completo de ingeniería que se sigue en una empresa, no solo el produ
 
 ## 2. Estado actual (2026-11-05)
 
-**Sprint 1: backend de autenticación completo y mergeado** (PR #5 a #10, 131 tests en
-verde). Frontend con API simulada en revisión (VIT-23). Alcance del sprint cerrado el 2026-10-22: **solo backend**, seis PR de
-autenticación descritos en el §5.
+**Sprint 1: autenticación completa de punta a punta.** Backend mergeado (PR #5 a #10, 131
+tests), frontend mergeado (#11 y #12) y conectado a la API real en los flujos de identidad
+(VIT-108). El resto de pantallas del frontend sigue con la API simulada hasta que tenga
+endpoint. El alcance inicial era solo backend; el frontend se adelantó (ver DUDAS_Y_CAMBIOS).
 
 ### Hecho
 - Análisis completo de los dos repos de v1 (código, no solo README).
@@ -63,7 +64,9 @@ autenticación descritos en el §5.
 - **Recuperación de contraseña (Sprint 1, PR 6)**: código de un solo uso por email, respuesta
   idéntica exista o no la cuenta, y cierre de todas las sesiones al cambiarla.
 - **Frontend (VIT-23)**: `apps/web` en React 19 + TypeScript con todas las pantallas del
-  paciente, contra una API simulada (MSW). Job `web` en la CI. Todavía no habla con el backend.
+  paciente, contra una API simulada (MSW). Job `web` en la CI.
+- **Frontend conectado (VIT-108)**: registro, verificación, acceso, sesión, recuperación y
+  Mis datos usan la API real con `pnpm dev:api` (proxy de Vite). Probado de punta a punta.
 - **`master` protegida** con un ruleset: PR obligatorio, CI verde, historial lineal.
 
 ### No hecho todavía
@@ -138,12 +141,15 @@ ver la entrada "Plan del Sprint 1" en [DUDAS_Y_CAMBIOS](DUDAS_Y_CAMBIOS.md).
    6. ~~Recuperación de contraseña por código de un solo uso por email~~ — **mergeado el
       2026-11-04** (VIT-65).
 
-   **Siguiente**: conectar los flujos de autenticación del frontend a la API real
-   (`VITE_API_MOCKS=false`), corrigiendo las diferencias de contrato anotadas en
-   DUDAS_Y_CAMBIOS (2026-11-05). Pendientes técnicos anotados en DUDAS_Y_CAMBIOS: rate limiting por
-   IP (Bucket4j), limpieza de `refresh_tokens` caducados y readiness tras el seeder demo.
+   7. ~~Conectar la autenticación del frontend a la API real~~ — VIT-108.
 
-   Fuera de este sprint: 2FA (Sprint 4) y todo el frontend (Sprint 2).
+   **Siguiente**: el ADR de referencias entre módulos (Q13) y después el Sprint 2 (catálogo y
+   citas), sustituyendo en el frontend cada pantalla simulada por su endpoint según exista.
+   Pendientes técnicos anotados en DUDAS_Y_CAMBIOS: rate limiting por IP (Bucket4j), limpieza
+   de `refresh_tokens` caducados, readiness tras el seeder demo y un endpoint para los datos
+   clínicos del paciente.
+
+   Fuera de este sprint: 2FA (Sprint 4).
 
 Los criterios de aceptación de esa slice ya están escritos en
 [SCOPE.md](SCOPE.md#sesión-y-refresh): cada escenario Gherkin debe acabar siendo un test con

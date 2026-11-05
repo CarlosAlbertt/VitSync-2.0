@@ -12,12 +12,13 @@ export function isValidNif(value: string) {
 }
 
 const email = z.email("Escribe un email válido.");
+// La misma regla que el backend (@ValidPassword): 12 caracteres o más y como mucho 72 bytes, el
+// límite de BCrypt. Sin reglas de composición: protege la longitud, y el backend además rechaza
+// las contraseñas que aparecen en filtraciones conocidas.
 const password = z
   .string()
   .min(12, "Mínimo 12 caracteres.")
-  .regex(/[A-ZÁÉÍÓÚÑ]/, "Incluye una mayúscula.")
-  .regex(/\d/, "Incluye un número.")
-  .regex(/[^\p{L}\d]/u, "Incluye un símbolo.");
+  .refine((value) => new TextEncoder().encode(value).length <= 72, "Demasiado larga: como mucho 72 bytes.");
 
 export const loginSchema = z.object({
   email,
@@ -44,7 +45,7 @@ export const recoverRequestSchema = z.object({ email });
 
 export const recoverSchema = z.object({
   code: z.string().regex(/^\d{6}$/, "El código tiene 6 dígitos."),
-  password,
+  newPassword: password,
 });
 
 export type LoginInput = z.infer<typeof loginSchema>;

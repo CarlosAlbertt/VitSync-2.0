@@ -35,7 +35,7 @@ export function SecurityPage() {
         <Panel title="Contraseña">
           <form onSubmit={changePassword} className="grid gap-4">
             <TextField label="Contraseña actual" type="password" autoComplete="current-password" />
-            <TextField label="Contraseña nueva" type="password" autoComplete="new-password" hint="Mínimo 12 caracteres, con mayúscula, número y símbolo." />
+            <TextField label="Contraseña nueva" type="password" autoComplete="new-password" hint="Mínimo 12 caracteres. Mejor una frase que una palabra." />
             <Button type="submit" className="justify-self-start">
               <KeyRound className="size-4.5" aria-hidden />
               Cambiar contraseña

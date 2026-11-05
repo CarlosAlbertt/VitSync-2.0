@@ -3,10 +3,14 @@ import { ApiError } from "@/shared/api/client";
 // La API devuelve code y texto en inglés; el usuario lee español. El front decide por el code.
 const MESSAGES: Record<string, string> = {
   INVALID_CREDENTIALS: "El email o la contraseña no son correctos.",
-  ACCOUNT_NOT_VERIFIED: "Tu cuenta aún no está verificada. Revisa tu correo.",
+  ACCOUNT_NOT_VERIFIED: "Tu cuenta aún no está verificada. Introduce el código que te hemos enviado por email.",
+  ACCOUNT_DISABLED: "Esta cuenta está desactivada. Escríbenos desde Contacto si crees que es un error.",
   ACCOUNT_ALREADY_EXISTS: "No hemos podido crear la cuenta con esos datos. Si ya tienes una, entra con ella.",
   PASSWORD_BREACHED: "Esa contraseña aparece en filtraciones conocidas. Elige otra.",
-  INVALID_CODE: "El código no es correcto o ha caducado.",
+  INVALID_OR_EXPIRED_CODE: "El código no es correcto o ha caducado.",
+  TOO_MANY_ATTEMPTS: "Has superado los intentos permitidos con este código. Pide uno nuevo.",
+  INVALID_REFRESH_TOKEN: "Tu sesión ha caducado. Vuelve a entrar.",
+  UNAUTHENTICATED: "Tu sesión ha caducado. Vuelve a entrar.",
   APPOINTMENT_SLOT_TAKEN: "Alguien acaba de reservar ese hueco. Te mostramos los que siguen libres.",
   APPOINTMENT_IN_THE_PAST: "No se puede reservar una cita en el pasado.",
   APPOINTMENT_NOT_CANCELLABLE: "Esta cita ya no se puede cancelar.",
