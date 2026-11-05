@@ -3,6 +3,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { Link, useNavigate } from "react-router";
 import { request } from "@/shared/api/client";
+import type { Registration } from "@/shared/api/types";
 import { errorMessage } from "@/shared/lib/errors";
 import { Button } from "@/shared/ui/button";
 import { FormError } from "@/shared/ui/feedback";
@@ -10,12 +11,22 @@ import { TextField } from "@/shared/ui/field";
 import { AuthCard } from "./AuthCard";
 import { registerSchema, type RegisterInput } from "./schemas";
 
+// El cuerpo que pide el contrato. El consentimiento se exige en el formulario, pero no viaja.
+const toRequest = ({ firstName, lastName, nif, birthDate, email, password }: RegisterInput) => ({
+  firstName: firstName.trim(),
+  lastName: lastName.trim(),
+  nif: nif.trim().toUpperCase(),
+  birthDate,
+  email: email.trim(),
+  password,
+});
+
 export function RegisterPage() {
   const navigate = useNavigate();
   const { register, handleSubmit, formState: { errors } } = useForm<RegisterInput>({ resolver: zodResolver(registerSchema) });
 
   const signUp = useMutation({
-    mutationFn: (body: RegisterInput) => request("/auth/register", { method: "POST", body }),
+    mutationFn: (values: RegisterInput) => request<Registration>("/auth/register", { method: "POST", body: toRequest(values) }),
     onSuccess: (_, values) => navigate("/verificar", { state: { email: values.email } }),
   });
 
@@ -36,7 +47,7 @@ export function RegisterPage() {
           label="Contraseña"
           type="password"
           autoComplete="new-password"
-          hint="Mínimo 12 caracteres, con mayúscula, número y símbolo."
+          hint="Mínimo 12 caracteres. Mejor una frase que una palabra."
           error={errors.password?.message}
           {...register("password")}
         />

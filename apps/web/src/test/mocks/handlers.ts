@@ -2,8 +2,8 @@ import { delay, http, HttpResponse } from "msw";
 import type { Appointment, Me, Page, Session, Slot } from "@/shared/api/types";
 import { DEMO_CODE, DEMO_EMAIL, DEMO_PASSWORD, demoUser, doctors, facilities, reports, specialties } from "./data";
 
-// API simulada con la forma del contrato: /api/v1, Page<T> y errores RFC 9457.
-// Se usa en desarrollo (hasta que exista el backend) y en los tests.
+// API simulada con la forma del contrato: /api/v1, Page<T> y errores RFC 9457. Se usa en los tests y en
+// desarrollo. La parte de identidad reproduce la API real (docs/openapi.json): si cambia una, cambia la otra.
 
 const API = "*/api/v1";
 const LATENCY = import.meta.env.MODE === "test" ? 0 : 280;
@@ -15,6 +15,9 @@ const accounts = new Map<string, Account>([[DEMO_EMAIL, { user: demoUser, passwo
 // sessionStorage hace aquí de "cookie httpOnly" y de base de datos: solo existe en el mock.
 const REFRESH_KEY = "mock-refresh-cookie";
 const APPOINTMENTS_KEY = "mock-appointments";
+
+const nifs = new Set<string>();
+const failedAttempts = new Map<string, number>();
 
 const problem = (status: number, code: string, detail: string) =>
   HttpResponse.json(
@@ -33,9 +36,24 @@ function paginate<T>(items: T[], url: URL, defaultSize = 20): Page<T> {
 
 const sessionFor = (user: Me): Session => ({ accessToken: `mock.${user.email}`, user });
 
+// Con la API real (modo "missing") el token es un JWT del backend: los datos simulados que
+// cuelgan de él (citas, informes) son siempre los de la paciente de demostración.
 function authedUser(request: Request) {
-  const email = request.headers.get("Authorization")?.replace("Bearer mock.", "");
-  return email ? accounts.get(email)?.user : undefined;
+  const token = request.headers.get("Authorization")?.replace("Bearer ", "");
+  if (!token) return undefined;
+  return token.startsWith("mock.") ? accounts.get(token.slice("mock.".length))?.user : demoUser;
+}
+
+/** Código de un solo uso: vale el de demostración, y tras `max` fallos queda quemado (429), como en la API. */
+function checkCode(key: string, code: string, max: number) {
+  const failures = failedAttempts.get(key) ?? 0;
+  if (failures >= max) return problem(429, "TOO_MANY_ATTEMPTS", "Too many attempts");
+  if (code !== DEMO_CODE) {
+    failedAttempts.set(key, failures + 1);
+    return problem(400, "INVALID_OR_EXPIRED_CODE", "Invalid or expired code");
+  }
+  failedAttempts.delete(key);
+  return null;
 }
 
 const unauthenticated = () => problem(401, "UNAUTHENTICATED", "A valid access token is required");
@@ -93,15 +111,15 @@ function slotsFor(doctorId: string, dateKey: string): Slot[] {
   return slots;
 }
 
-export const handlers = [
-  http.all(`${API}/*`, async () => {
-    await delay(LATENCY);
-  }),
+const latency = http.all(`${API}/*`, async () => {
+  await delay(LATENCY);
+});
 
-  // ─── Identidad ────────────────────────────────────────────────────────────
+/** Identidad: misma forma, códigos y estados que /api/v1/auth y /api/v1/me en el backend. */
+export const identityHandlers = [
   http.post(`${API}/auth/login`, async ({ request }) => {
     const { email, password } = (await request.json()) as { email: string; password: string };
-    const account = accounts.get(email.toLowerCase());
+    const account = accounts.get(email.trim().toLowerCase());
     if (!account || account.password !== password) return problem(401, "INVALID_CREDENTIALS", "Invalid credentials");
     if (!account.verified) return problem(403, "ACCOUNT_NOT_VERIFIED", "Account not verified");
     sessionStorage.setItem(REFRESH_KEY, account.user.email);
@@ -110,7 +128,7 @@ export const handlers = [
 
   http.post(`${API}/auth/refresh`, () => {
     const account = accounts.get(sessionStorage.getItem(REFRESH_KEY) ?? "");
-    return account ? HttpResponse.json(sessionFor(account.user)) : unauthenticated();
+    return account ? HttpResponse.json(sessionFor(account.user)) : problem(401, "INVALID_REFRESH_TOKEN", "Session expired");
   }),
 
   http.post(`${API}/auth/logout`, () => {
@@ -119,31 +137,41 @@ export const handlers = [
   }),
 
   http.post(`${API}/auth/register`, async ({ request }) => {
-    const body = (await request.json()) as { email: string; password: string; firstName: string; lastName: string; birthDate: string };
-    const email = body.email.toLowerCase();
-    if (accounts.has(email)) return problem(409, "ACCOUNT_ALREADY_EXISTS", "Account already exists");
-    if (body.password.toLowerCase().includes("password")) return problem(400, "PASSWORD_BREACHED", "Password found in known breaches");
-    const user: Me = { publicId: crypto.randomUUID(), email, firstName: body.firstName, lastName: body.lastName, role: "PATIENT", phone: null, birthDate: body.birthDate, bloodType: null, allergies: null, emergencyContact: null };
-    accounts.set(email, { user, password: body.password, verified: false });
-    return new HttpResponse(null, { status: 201 });
+    const body = (await request.json()) as Partial<Record<"email" | "password" | "firstName" | "lastName" | "nif" | "birthDate" | "phone", string>>;
+    const required = ["email", "password", "firstName", "lastName", "nif", "birthDate"] as const;
+    if (required.some((field) => !body[field]?.trim())) return problem(400, "VALIDATION_FAILED", "One or more fields are invalid");
+    const email = body.email!.trim().toLowerCase();
+    const nif = body.nif!.trim().toUpperCase();
+    // El mismo 409 para email y NIF: no revela cuál de los dos existe ya.
+    if (accounts.has(email) || nifs.has(nif)) return problem(409, "ACCOUNT_ALREADY_EXISTS", "Account already exists");
+    if (body.password!.toLowerCase().includes("password")) return problem(400, "PASSWORD_BREACHED", "Password found in known breaches");
+    const user: Me = { id: crypto.randomUUID(), email, role: "PATIENT", firstName: body.firstName!, lastName: body.lastName!, phone: body.phone ?? null, locale: "es-ES", emailVerified: false };
+    accounts.set(email, { user, password: body.password!, verified: false });
+    nifs.add(nif);
+    return HttpResponse.json({ email, status: "PENDING_VERIFICATION" }, { status: 201 });
   }),
 
   http.post(`${API}/auth/verify`, async ({ request }) => {
     const { email, code } = (await request.json()) as { email: string; code: string };
-    const account = accounts.get(email.toLowerCase());
-    if (!account || code !== DEMO_CODE) return problem(400, "INVALID_CODE", "Invalid or expired code");
+    const rejected = checkCode(`verify:${email}`, code, 10);
+    if (rejected) return rejected;
+    const account = accounts.get(email.trim().toLowerCase());
+    if (!account) return problem(400, "INVALID_OR_EXPIRED_CODE", "Invalid or expired code");
     account.verified = true;
+    account.user.emailVerified = true;
     return new HttpResponse(null, { status: 204 });
   }),
 
   http.post(`${API}/auth/password-reset/request`, () => new HttpResponse(null, { status: 202 })),
 
   http.post(`${API}/auth/password-reset`, async ({ request }) => {
-    const { email, code, password } = (await request.json()) as { email: string; code: string; password: string };
-    const account = accounts.get(email.toLowerCase());
-    if (!account || code !== DEMO_CODE) return problem(400, "INVALID_CODE", "Invalid or expired code");
-    account.password = password;
-    sessionStorage.removeItem(REFRESH_KEY);
+    const { email, code, newPassword } = (await request.json()) as { email: string; code: string; newPassword: string };
+    const rejected = checkCode(`reset:${email}`, code, 5);
+    if (rejected) return rejected;
+    const account = accounts.get(email.trim().toLowerCase());
+    if (!account) return problem(400, "INVALID_OR_EXPIRED_CODE", "Invalid or expired code");
+    account.password = newPassword;
+    sessionStorage.removeItem(REFRESH_KEY); // cambiar la contraseña cierra todas las sesiones
     return new HttpResponse(null, { status: 204 });
   }),
 
@@ -155,10 +183,18 @@ export const handlers = [
   http.patch(`${API}/me`, async ({ request }) => {
     const user = authedUser(request);
     if (!user) return unauthenticated();
-    Object.assign(user, await request.json());
+    // Solo lo que la API deja cambiar. Un teléfono vacío lo borra.
+    const body = (await request.json()) as Partial<Record<"firstName" | "lastName" | "phone" | "locale", string>>;
+    if (body.firstName !== undefined) user.firstName = body.firstName;
+    if (body.lastName !== undefined) user.lastName = body.lastName;
+    if (body.locale !== undefined) user.locale = body.locale;
+    if (body.phone !== undefined) user.phone = body.phone || null;
     return HttpResponse.json(user);
   }),
+];
 
+/** Lo que el backend aún no tiene: catálogo, citas e informes. */
+export const dataHandlers = [
   // ─── Catálogo ─────────────────────────────────────────────────────────────
   http.get(`${API}/specialties`, ({ request }) => {
     const url = new URL(request.url);
@@ -241,9 +277,16 @@ export const handlers = [
   }),
 ];
 
+export const handlers = [latency, ...identityHandlers, ...dataHandlers];
+
+/** Modo "missing" (pnpm dev:api): la identidad la responde el backend real. */
+export const missingHandlers = [latency, ...dataHandlers];
+
 /** Para los tests: cada uno empieza con el mock limpio. */
 export function resetMocks() {
   racedSlots.clear();
+  nifs.clear();
+  failedAttempts.clear();
   sessionStorage.clear();
   accounts.clear();
   accounts.set(DEMO_EMAIL, { user: { ...demoUser }, password: DEMO_PASSWORD, verified: true });

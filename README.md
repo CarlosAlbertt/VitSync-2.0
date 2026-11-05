@@ -20,7 +20,7 @@ después el código. Toda la ingeniería está descrita en la
 | | |
 |---|---|
 | Fase actual | **Sprint 1 en curso**: autenticación, con la interfaz adelantada |
-| Código de producto | Frontend contra API simulada; backend sin endpoints de negocio |
+| Código de producto | Autenticación completa de punta a punta; el resto del frontend, con API simulada |
 | Base de datos | Flyway con el esquema base (19 tablas) ✅ |
 | Entorno local | `docker compose up -d` → Postgres + MinIO + Mailpit ✅ |
 | Tests | `./mvnw verify` con Testcontainers y Vitest en `apps/web` ✅ |
@@ -51,7 +51,15 @@ corepack pnpm install
 corepack pnpm --filter web dev                                   # http://localhost:5173
 ```
 
-Cuenta de demostración: `paciente@vitsync.test` / `Demostracion-2026`.
+Con el backend arrancado (comandos de arriba), `dev:api` usa la API real para la identidad
+(registro, acceso, sesión, recuperación y Mis datos) y la simulada para lo demás:
+
+```bash
+corepack pnpm --filter web dev:api                               # http://localhost:5173
+```
+
+Cuenta de demostración en los dos modos: `paciente@vitsync.test` / `Demostracion-2026`. Con la
+API real, los códigos de verificación llegan a Mailpit (http://localhost:8025).
 
 ---
 

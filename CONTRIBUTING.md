@@ -94,6 +94,26 @@ No necesita el backend: en desarrollo, la API la simula MSW con la forma del con
 (`apps/web/src/test/mocks`). En la pantalla de acceso hay un botón para entrar con la cuenta
 de demostración; el código de verificación de la demo es `123456`.
 
+Para probar contra el backend real, arráncalo con el perfil `local` y lanza el modo API:
+
+```bash
+corepack pnpm --filter web dev:api  # http://localhost:5173
+```
+
+En ese modo, `/auth/*` y `/me` van al backend a través del proxy de Vite (`/api` →
+`localhost:8080`): mismo origen, así que la cookie del refresh funciona sin CORS. El resto
+(catálogo, citas, informes y el área del paciente) sigue simulado hasta que tenga endpoint.
+Los códigos de un solo uso llegan a Mailpit (http://localhost:8025).
+
+| `VITE_API_MOCKS` | Qué se simula | Cuándo |
+|---|---|---|
+| `all` | Todo | `pnpm dev` (por defecto en desarrollo) y tests |
+| `missing` | Solo lo que el backend aún no tiene | `pnpm dev:api` |
+| `none` | Nada | Build de producción (por defecto) |
+
+Si cambia el contrato de `/auth` o `/me`, el mock (`identityHandlers`) se actualiza en el
+mismo PR: la API simulada tiene que comportarse como la real.
+
 ## 3. Idioma
 
 | Qué | Idioma |

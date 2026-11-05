@@ -26,6 +26,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link, NavLink, Navigate, Outlet, ScrollRestoration, useLocation, useNavigate } from "react-router";
 import { request } from "@/shared/api/client";
 import { useSession } from "@/shared/api/session";
+import type { Role } from "@/shared/api/types";
 import { CONTACT } from "@/shared/config/contact";
 import { conversations, family, notices } from "@/shared/demo/patient";
 import { demo } from "@/shared/lib/demo";
@@ -391,6 +392,8 @@ function NotificationsMenu() {
   );
 }
 
+const ROLE_LABEL: Record<Role, string> = { PATIENT: "Paciente", DOCTOR: "Profesional", ADMIN: "Administración" };
+
 function UserMenu() {
   const user = useSession((s) => s.user);
   const logout = useLogout();
@@ -403,7 +406,7 @@ function UserMenu() {
         <Avatar person={user} className="size-9 text-sm" />
         <span className="hidden text-left leading-tight md:block">
           <span className="block text-sm font-bold">{user.firstName}</span>
-          <span className="block text-xs text-ink-soft">Paciente</span>
+          <span className="block text-xs text-ink-soft">{ROLE_LABEL[user.role]}</span>
         </span>
         <ChevronDown className="size-4 text-ink-soft" aria-hidden />
         <span className="sr-only">Menú de tu cuenta</span>

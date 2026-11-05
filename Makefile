@@ -1,7 +1,7 @@
 # Atajos del monorepo (guía, Fase 2.3).
 # En Windows, si no tienes make, ejecuta el comando de la derecha tal cual.
 
-.PHONY: up down logs api web test seed migrate-info clean help
+.PHONY: up down logs api web web-api test seed migrate-info clean help
 
 help:            ## Lista los comandos disponibles
 	@grep -E '^[a-z-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}'
@@ -21,8 +21,11 @@ logs:            ## Sigue los logs de los servicios
 api:             ## Arranca la API con el perfil local
 	cd apps/api && ./mvnw spring-boot:run -Dspring-boot.run.profiles=local
 
-web:             ## Arranca el frontend (http://localhost:5173)
+web:             ## Arranca el frontend con todo simulado (http://localhost:5173)
 	corepack pnpm --filter web dev
+
+web-api:         ## Frontend contra el backend local: identidad real, el resto simulado
+	corepack pnpm --filter web dev:api
 
 test:            ## Tests del backend (requiere Docker: Testcontainers) y del frontend
 	cd apps/api && ./mvnw verify

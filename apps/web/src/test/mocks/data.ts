@@ -7,16 +7,14 @@ export const DEMO_EMAIL = "paciente@vitsync.test";
 export const DEMO_CODE = "123456";
 
 export const demoUser: Me = {
-  publicId: "0190a0a0-0000-7000-8000-000000000001",
+  id: "0190a0a0-0000-7000-8000-000000000001",
   email: DEMO_EMAIL,
+  role: "PATIENT",
   firstName: "Lucía",
   lastName: "Ferrer Navarro",
-  role: "PATIENT",
-  phone: "+34 600 000 000",
-  birthDate: "1991-03-14",
-  bloodType: "A+",
-  allergies: "Penicilina",
-  emergencyContact: "Marcos Ferrer · +34 600 000 001",
+  phone: "+34600000000",
+  locale: "es-ES",
+  emailVerified: true,
 };
 
 const spec = (slug: string, name: string, kind: Specialty["kind"], description: string): Specialty => ({

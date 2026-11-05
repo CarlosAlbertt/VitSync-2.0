@@ -1,5 +1,5 @@
-// Tipos del contrato. Escritos a mano mientras docs/openapi.json no tenga rutas:
-// cuando existan, este fichero se sustituye por el schema generado (guía, Fase 3.3).
+// Tipos del contrato, escritos a mano. Identidad (/auth, /me) sigue docs/openapi.json; el resto es
+// la propuesta para endpoints que aún no existen. Cuando existan, se generarán del schema (guía, Fase 3.3).
 
 export type Page<T> = {
   content: T[];
@@ -18,18 +18,19 @@ export type Problem = {
 
 export type Role = "PATIENT" | "DOCTOR" | "ADMIN";
 
+/** El usuario autenticado, tal y como lo devuelve /api/v1/me. Sin datos clínicos: tendrán su propio módulo. */
 export type Me = {
-  publicId: string;
+  id: string;
   email: string;
+  role: Role;
   firstName: string;
   lastName: string;
-  role: Role;
   phone: string | null;
-  birthDate: string;
-  bloodType: string | null;
-  allergies: string | null;
-  emergencyContact: string | null;
+  locale: string;
+  emailVerified: boolean;
 };
+
+export type Registration = { email: string; status: "PENDING_VERIFICATION" };
 
 export type SpecialtyKind = "MEDICAL" | "SURGICAL" | "DIAGNOSTIC" | "GENERAL" | "UNIT";
 
