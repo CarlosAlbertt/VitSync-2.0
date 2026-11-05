@@ -2,7 +2,7 @@
 
 > Documento de retoma. Léelo entero antes de tocar nada: en 5 minutos sabes dónde está
 > el proyecto, qué está decidido y cuál es el siguiente paso concreto.
-> Última actualización: **2026-11-04**.
+> Última actualización: **2026-11-05**.
 
 ---
 
@@ -18,10 +18,10 @@ el proceso completo de ingeniería que se sigue en una empresa, no solo el produ
 
 ---
 
-## 2. Estado actual (2026-11-04)
+## 2. Estado actual (2026-11-05)
 
-**Sprint 1: backend de autenticación completo en seis PR apilados, pendientes de revisión**
-(131 tests en verde). Alcance del sprint cerrado el 2026-10-22: **solo backend**, seis PR de
+**Sprint 1: backend de autenticación completo y mergeado** (PR #5 a #10, 131 tests en
+verde). Frontend con API simulada en revisión (VIT-23). Alcance del sprint cerrado el 2026-10-22: **solo backend**, seis PR de
 autenticación descritos en el §5.
 
 ### Hecho
@@ -62,12 +62,15 @@ autenticación descritos en el §5.
   (revoca la familia y lo registra en `audit_logs`).
 - **Recuperación de contraseña (Sprint 1, PR 6)**: código de un solo uso por email, respuesta
   idéntica exista o no la cuenta, y cierre de todas las sesiones al cambiarla.
+- **Frontend (VIT-23)**: `apps/web` en React 19 + TypeScript con todas las pantallas del
+  paciente, contra una API simulada (MSW). Job `web` en la CI. Todavía no habla con el backend.
 - **`master` protegida** con un ruleset: PR obligatorio, CI verde, historial lineal.
 
 ### No hecho todavía
 - **Dominio mínimo**: solo `iam` y `notification` tienen entidades; el resto de módulos
-  siguen vacíos. No existe
-  `apps/web` (Fase 9).
+  siguen vacíos.
+- **El frontend no está conectado a la API real**: usa MSW. Las diferencias de contrato están
+  en [DUDAS_Y_CAMBIOS](DUDAS_Y_CAMBIOS.md) (2026-11-05).
 - Sin tablero de Jira (guía lista en [JIRA_SETUP.md](JIRA_SETUP.md), falta ejecutarla).
 - Sin licencia (ver [DUDAS_Y_CAMBIOS](DUDAS_Y_CAMBIOS.md), Q7).
 - La CI no comprueba aún formato, cobertura ni vulnerabilidades de dependencias: esas
@@ -127,16 +130,17 @@ ver la entrada "Plan del Sprint 1" en [DUDAS_Y_CAMBIOS](DUDAS_Y_CAMBIOS.md).
    `ArchitectureTest`. Antes de la slice de citas hay que cerrar con un ADR cómo se
    referencian los módulos entre sí (Q13 en [DUDAS_Y_CAMBIOS](DUDAS_Y_CAMBIOS.md)).
 4. **Autenticación, en seis PR**, por este orden:
-   1. ~~Cifrado base (`common/crypto`)~~ — **PR abierto el 2026-11-04** (VIT-71 + VIT-72).
-   2. ~~Registro de pacientes~~ — **PR abierto el 2026-11-04** (VIT-61).
-   3. ~~Outbox con su worker y verificación de email~~ — **PR abierto el 2026-11-04** (VIT-66 + VIT-62).
-   4. ~~Login JWT RS256 + refresh en cookie, y usuarios demo~~ — **PR abierto el 2026-11-04** (VIT-63 + VIT-67).
-   5. ~~Refresh rotativo con detección de reuso~~ — **PR abierto el 2026-11-04** (VIT-64).
-   6. ~~Recuperación de contraseña por código de un solo uso por email~~ — **PR abierto el
+   1. ~~Cifrado base (`common/crypto`)~~ — **mergeado el 2026-11-04** (VIT-71 + VIT-72).
+   2. ~~Registro de pacientes~~ — **mergeado el 2026-11-04** (VIT-61).
+   3. ~~Outbox con su worker y verificación de email~~ — **mergeado el 2026-11-04** (VIT-66 + VIT-62).
+   4. ~~Login JWT RS256 + refresh en cookie, y usuarios demo~~ — **mergeado el 2026-11-04** (VIT-63 + VIT-67).
+   5. ~~Refresh rotativo con detección de reuso~~ — **mergeado el 2026-11-04** (VIT-64).
+   6. ~~Recuperación de contraseña por código de un solo uso por email~~ — **mergeado el
       2026-11-04** (VIT-65).
 
-   **Siguiente**: revisar y mergear los seis PR en orden (están apilados) y conectar el
-   frontend a la API real. Pendientes técnicos anotados en DUDAS_Y_CAMBIOS: rate limiting por
+   **Siguiente**: conectar los flujos de autenticación del frontend a la API real
+   (`VITE_API_MOCKS=false`), corrigiendo las diferencias de contrato anotadas en
+   DUDAS_Y_CAMBIOS (2026-11-05). Pendientes técnicos anotados en DUDAS_Y_CAMBIOS: rate limiting por
    IP (Bucket4j), limpieza de `refresh_tokens` caducados y readiness tras el seeder demo.
 
    Fuera de este sprint: 2FA (Sprint 4) y todo el frontend (Sprint 2).
