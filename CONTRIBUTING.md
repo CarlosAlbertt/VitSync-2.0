@@ -117,11 +117,12 @@ corepack pnpm install
 corepack pnpm --filter web dev      # http://localhost:5173
 ```
 
-Lo que ya tiene endpoint (`/auth/*` y `/me` hoy; el catálogo cuando las pantallas se conecten,
-VIT-80) va al backend a través del proxy de Vite (`/api` → `localhost:8080`): mismo origen,
-así que la cookie del refresh funciona sin CORS. El resto (citas, informes, mensajes y el
-área del paciente) lo simula MSW (`apps/web/src/test/mocks`) hasta que tenga endpoint. Los
-códigos de un solo uso llegan a Mailpit (http://localhost:8025).
+Lo que ya tiene endpoint (identidad, `/me` y el catálogo: especialidades, centros y cuadro
+médico) va al backend a través del proxy de Vite (`/api` → `localhost:8080`): mismo origen,
+así que la cookie del refresh funciona sin CORS. El resto (huecos de la agenda, citas,
+informes, mensajes y el área del paciente) lo simula MSW (`apps/web/src/test/mocks`) hasta
+que tenga endpoint. Los códigos de un solo uso llegan a Mailpit (http://localhost:8025). Si la
+API no está arrancada, las peticiones responden `503 BACKEND_UNAVAILABLE`.
 
 Sin backend ni Docker, con todo simulado:
 
@@ -138,8 +139,20 @@ demostración, y el código de verificación es siempre `123456`.
 | `all` | Todo | `pnpm dev:mocks` y tests |
 | `none` | Nada | Build de producción (por defecto) |
 
-Si cambia el contrato de `/auth` o `/me`, el mock (`identityHandlers`) se actualiza en el
-mismo PR: la API simulada tiene que comportarse como la real.
+### Tipos del contrato
+
+Los tipos de lo que ya existe en la API no se escriben a mano: se generan de
+`docs/openapi.json` en `apps/web/src/shared/api/schema.d.ts`, y `shared/api/types.ts` los
+reexporta con nombres cortos. Cuando un PR cambia el contrato:
+
+```bash
+cd apps/api && ./mvnw verify -Dopenapi.update=true     # regenera docs/openapi.json
+corepack pnpm --filter web api:types                    # regenera los tipos del frontend
+```
+
+La CI comprueba que `schema.d.ts` está al día. Si un campo cambia, el frontend deja de
+compilar donde lo usa, y el mock afectado (`identityHandlers`, `catalogHandlers`) se ajusta en
+el mismo PR: la API simulada tiene que comportarse como la real.
 
 ## 3. Idioma
 

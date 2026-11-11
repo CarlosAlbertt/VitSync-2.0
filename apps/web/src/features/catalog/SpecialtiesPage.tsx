@@ -1,6 +1,7 @@
 import { Search } from "lucide-react";
 import { useState } from "react";
 import { useSpecialties } from "@/shared/api/catalog";
+import { useDebouncedValue } from "@/shared/lib/use-debounced-value";
 import { ButtonLink } from "@/shared/ui/button";
 import { EmptyState, ErrorState, Skeleton } from "@/shared/ui/feedback";
 import { Pagination } from "@/shared/ui/pagination";
@@ -9,7 +10,8 @@ import { SpecialtyArt } from "@/shared/ui/specialty-art";
 export function SpecialtiesPage() {
   const [q, setQ] = useState("");
   const [page, setPage] = useState(0);
-  const { data, isPending, isError, refetch } = useSpecialties({ q, page, size: 12 });
+  const query = useDebouncedValue(q.trim());
+  const { data, isPending, isError, refetch } = useSpecialties({ q: query, page, size: 12 });
 
   return (
     <>

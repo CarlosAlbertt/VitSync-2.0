@@ -1,5 +1,5 @@
-import { delay, http, HttpResponse } from "msw";
-import type { Appointment, Me, Page, Session, Slot } from "@/shared/api/types";
+import { bypass, delay, http, HttpResponse } from "msw";
+import type { Appointment, Doctor, Me, Page, Session, Slot } from "@/shared/api/types";
 import { DEMO_CODE, DEMO_EMAIL, DEMO_PASSWORD, demoUser, doctors, facilities, reports, specialties } from "./data";
 
 // API simulada con la forma del contrato: /api/v1, Page<T> y errores RFC 9457. Se usa en los tests y en
@@ -54,6 +54,19 @@ function checkCode(key: string, code: string, max: number) {
   }
   failedAttempts.delete(key);
   return null;
+}
+
+/**
+ * El médico de una cita simulada. En modo "missing" el cuadro médico es el real y sus ids no
+ * están en los datos simulados: se busca en la API real. bypass() hace que esa petición no la
+ * vuelva a interceptar el propio mock.
+ */
+async function findDoctor(publicId: string): Promise<Doctor | undefined> {
+  const simulated = doctors.find((d) => d.publicId === publicId);
+  if (simulated || typeof location === "undefined") return simulated;
+  const res = await fetch(bypass(new URL("/api/v1/doctors?size=100", location.origin)));
+  if (!res.ok) return undefined;
+  return ((await res.json()) as Page<Doctor>).content.find((d) => d.publicId === publicId);
 }
 
 const unauthenticated = () => problem(401, "UNAUTHENTICATED", "A valid access token is required");
@@ -193,14 +206,15 @@ export const identityHandlers = [
   }),
 ];
 
-/** Lo que el backend aún no tiene: catálogo, citas e informes. */
-export const dataHandlers = [
-  // ─── Catálogo ─────────────────────────────────────────────────────────────
+/** Catálogo público: en modo "missing" (pnpm dev) lo responde el backend real (VIT-80). */
+export const catalogHandlers = [
   http.get(`${API}/specialties`, ({ request }) => {
     const url = new URL(request.url);
-    const q = url.searchParams.get("q")?.toLowerCase();
+    // Como la API real: sin distinguir mayúsculas ni tildes.
+    const plain = (text: string) => text.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
+    const q = plain(url.searchParams.get("q") ?? "");
     const kind = url.searchParams.get("kind");
-    const items = specialties.filter((s) => (!q || s.name.toLowerCase().includes(q)) && (!kind || s.kind === kind));
+    const items = specialties.filter((s) => (!q || plain(s.name).includes(q)) && (!kind || s.kind === kind));
     return HttpResponse.json(paginate(items, url));
   }),
 
@@ -213,7 +227,11 @@ export const dataHandlers = [
     const items = doctors.filter((d) => (!specialty || d.specialty.slug === specialty) && (!facility || d.facilities.some((f) => f.publicId === facility)));
     return HttpResponse.json(paginate(items, url, 8));
   }),
+];
 
+/** Lo que el backend aún no tiene: agenda, citas e informes. */
+export const dataHandlers = [
+  // ─── Agenda ───────────────────────────────────────────────────────────────
   http.get(`${API}/doctors/:id/slots`, ({ params, request }) => {
     const date = new URL(request.url).searchParams.get("date") ?? "";
     return HttpResponse.json(slotsFor(String(params.id), date));
@@ -240,7 +258,7 @@ export const dataHandlers = [
       racedSlots.add(body.startsAt);
       return problem(409, "APPOINTMENT_SLOT_TAKEN", "The selected time is no longer available");
     }
-    const doctor = doctors.find((d) => d.publicId === body.doctorId);
+    const doctor = await findDoctor(body.doctorId);
     if (!doctor) return problem(404, "RESOURCE_NOT_FOUND", "The requested resource does not exist");
     const facility = doctor.facilities.find((f) => f.publicId === body.facilityId) ?? null;
     const appointment: Appointment = {
@@ -277,9 +295,9 @@ export const dataHandlers = [
   }),
 ];
 
-export const handlers = [latency, ...identityHandlers, ...dataHandlers];
+export const handlers = [latency, ...identityHandlers, ...catalogHandlers, ...dataHandlers];
 
-/** Modo "missing" (pnpm dev): la identidad la responde el backend real. */
+/** Modo "missing" (pnpm dev): identidad y catálogo los responde el backend real. */
 export const missingHandlers = [latency, ...dataHandlers];
 
 /** Para los tests: cada uno empieza con el mock limpio. */
