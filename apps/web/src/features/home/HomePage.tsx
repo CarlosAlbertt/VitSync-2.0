@@ -429,10 +429,12 @@ function Facilities() {
                 <MapPin className="mt-0.5 size-4 shrink-0" aria-hidden />
                 {f.address}, {f.city}
               </p>
-              <a href={`tel:${f.phone.replaceAll(" ", "")}`} className="mt-1.5 flex items-center gap-1.5 text-sm text-ink-soft hover:text-ink">
-                <Phone className="size-4 shrink-0" aria-hidden />
-                {f.phone}
-              </a>
+              {f.phone && (
+                <a href={`tel:${f.phone.replaceAll(" ", "")}`} className="mt-1.5 flex items-center gap-1.5 text-sm text-ink-soft hover:text-ink">
+                  <Phone className="size-4 shrink-0" aria-hidden />
+                  {f.phone}
+                </a>
+              )}
               <Link to={`/profesionales?centro=${f.publicId}`} className="mt-auto inline-flex items-center gap-1.5 pt-4 text-sm font-semibold hover:underline">
                 Ver profesionales
                 <ArrowRight className="size-4" aria-hidden />

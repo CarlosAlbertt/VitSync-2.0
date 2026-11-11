@@ -147,8 +147,9 @@ ver la entrada "Plan del Sprint 1" en [DUDAS_Y_CAMBIOS](DUDAS_Y_CAMBIOS.md).
 
    **Sprint 2 en curso**: especialidades, centros y datos de demostración (VIT-76, VIT-77 y
    VIT-81) mergeados (#16), con la base de demostración `vitsync_dev` (perfil `demo`) y
-   `pnpm dev` contra la API real. Cuadro médico (VIT-78) en PR. Después, las pantallas del
-   catálogo contra la API real (VIT-80) y las enfermedades (VIT-79).
+   `pnpm dev` contra la API real. Cuadro médico (VIT-78) mergeado (#17). Pantallas del
+   catálogo contra la API real con tipos generados del contrato (VIT-80 y VIT-70) en PR.
+   Después, las enfermedades (VIT-79).
 
    **Siguiente**: el resto del Sprint 2 (catálogo y citas), con las referencias entre módulos según
    [ADR-0009](adr/0009-referencias-entre-modulos-por-id.md), sustituyendo en el frontend cada

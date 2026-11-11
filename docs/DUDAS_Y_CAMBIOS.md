@@ -6,6 +6,52 @@
 
 ---
 
+## 2026-11-11 — Pantallas del catálogo contra la API real y tipos generados (VIT-80, VIT-70)
+
+### Cambios realizados
+
+- **Catálogo real en `pnpm dev`**: especialidades, centros y cuadro médico los responde el
+  backend. Sus mocks pasan a `catalogHandlers`, que solo se usan con `pnpm dev:mocks` y en los
+  tests. Los huecos de la agenda (`/doctors/{id}/slots`) siguen simulados hasta que exista la
+  agenda; funcionan con cualquier id de médico.
+- **Tipos generados del contrato** (`openapi-typescript`): `shared/api/schema.d.ts` sale de
+  `docs/openapi.json` (`pnpm --filter web api:types`), y `types.ts` reexporta lo que ya existe
+  en la API. Lo que aún no tiene endpoint sigue escrito a mano en la parte de abajo. La CI
+  comprueba que los tipos están al día. Al generarlos, el compilador encontró dos diferencias
+  reales con la API: el teléfono de un centro puede ser `null` (la portada lo daba por hecho) y
+  los mocks no traían `postalCode`.
+- **Campos obligatorios en las respuestas** (backend): springdoc no marcaba ningún campo como
+  `required`, y los tipos generados los habrían hecho todos opcionales. Un `OpenApiCustomizer`
+  los marca en todo lo que cuelga de una respuesta 2xx (Jackson escribe siempre todos los
+  campos; los vacíos, como `null`). No toca las peticiones, donde hay opcionales de verdad, ni
+  `ProblemDetail`.
+- **Catálogo público también en el contrato**: los tres endpoints llevan `@SecurityRequirements`
+  vacío. Antes Swagger les ponía el candado de Bearer aunque no lo piden.
+- **Caché (criterio de VIT-80)**: las listas del catálogo usan `staleTime: 0`. Al volver a una
+  pantalla se pintan al instante desde la caché y se revalidan en segundo plano. Antes tenían 5
+  minutos, y en ese tiempo no se revalidaban.
+- **Búsqueda de especialidades** con *debounce* de 250 ms: contra la API real, cada tecla era
+  una petición. El mock busca ahora sin tildes, como la API.
+- **Reserva simulada con médicos reales**: la cita (aún simulada) busca al médico en la API real
+  si no está en los datos simulados (`bypass` de MSW).
+- **Proxy de Vite sin backend**: responde `503 BACKEND_UNAVAILABLE` con el formato de error de la
+  API y lo que hay que hacer, en vez del 500 genérico, que parecía un fallo del backend.
+
+### Pendiente anotado
+
+- Los datos simulados que aún no tienen endpoint (equipo médico y mensajes del área del
+  paciente) enlazan a médicos simulados (`doc-1`). Con el catálogo real, "Pedir cita" desde ahí
+  empieza la reserva desde el primer paso. Se resuelve cuando existan esos endpoints.
+
+### Verificación
+
+Tipos, lint, 30 tests y build del frontend. `SpecialtiesPage.test.tsx` prueba el criterio de
+la caché (y falla con la configuración anterior) y la búsqueda sin tildes. De punta a punta
+contra `vitsync_dev`: cuadro médico filtrado por especialidad y por centro con datos reales, y
+reserva simulada con un médico real (201).
+
+---
+
 ## 2026-11-11 — Cuadro médico público (VIT-78)
 
 ### Contexto

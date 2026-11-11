@@ -19,8 +19,8 @@ después el código. Toda la ingeniería está descrita en la
 
 | | |
 |---|---|
-| Fase actual | **Sprint 1 en curso**: autenticación, con la interfaz adelantada |
-| Código de producto | Autenticación completa de punta a punta; el resto del frontend, con API simulada |
+| Fase actual | **Sprint 2 en curso**: catálogo (especialidades, centros y cuadro médico) |
+| Código de producto | Autenticación y catálogo de punta a punta; agenda, citas e informes, con API simulada |
 | Base de datos | Flyway con el esquema base (19 tablas) ✅ |
 | Entorno local | `docker compose up -d` → Postgres + MinIO + Mailpit ✅ |
 | Tests | `./mvnw verify` con Testcontainers y Vitest en `apps/web` ✅ |

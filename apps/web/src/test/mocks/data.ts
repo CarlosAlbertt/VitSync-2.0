@@ -42,10 +42,10 @@ export const specialties: Specialty[] = [
 ];
 
 export const facilities: Facility[] = [
-  { publicId: "fac-turia", name: "Centro Jardín del Turia", address: "Paseo de la Ribera 12", city: "València", phone: "+34 960 000 010" },
-  { publicId: "fac-albufera", name: "Clínica Albufera", address: "Avenida del Puerto 88", city: "València", phone: "+34 960 000 020" },
-  { publicId: "fac-retiro", name: "Consultas Retiro", address: "Calle de los Tilos 5", city: "Madrid", phone: "+34 910 000 030" },
-  { publicId: "fac-barceloneta", name: "Espai Mediterrani", address: "Passeig de la Mar 21", city: "Barcelona", phone: "+34 930 000 040" },
+  { publicId: "fac-turia", name: "Centro Jardín del Turia", address: "Paseo de la Ribera 12", city: "València", postalCode: "46010", phone: "+34 960 000 010" },
+  { publicId: "fac-albufera", name: "Clínica Albufera", address: "Avenida del Puerto 88", city: "València", postalCode: "46023", phone: "+34 960 000 020" },
+  { publicId: "fac-retiro", name: "Consultas Retiro", address: "Calle de los Tilos 5", city: "Madrid", postalCode: "28009", phone: "+34 910 000 030" },
+  { publicId: "fac-barceloneta", name: "Espai Mediterrani", address: "Passeig de la Mar 21", city: "Barcelona", postalCode: "08003", phone: "+34 930 000 040" },
 ];
 
 const seed: [string, string, string, string, string[]][] = [

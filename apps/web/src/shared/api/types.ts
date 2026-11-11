@@ -1,10 +1,14 @@
-// Tipos del contrato, escritos a mano. Identidad (/auth, /me) sigue docs/openapi.json; el resto es
-// la propuesta para endpoints que aún no existen. Cuando existan, se generarán del schema (guía, Fase 3.3).
+import type { components } from "./schema";
 
-export type Page<T> = {
-  content: T[];
-  page: { number: number; size: number; totalElements: number; totalPages: number };
-};
+// Tipos del contrato. Lo que ya existe en la API sale de docs/openapi.json, generado en schema.d.ts
+// (pnpm --filter web api:types; la CI comprueba que está al día): si el backend cambia un campo, el
+// frontend deja de compilar. Lo de más abajo, a mano, es la propuesta para endpoints que aún no existen;
+// se moverá aquí arriba cuando existan.
+
+type Schemas = components["schemas"];
+
+/** Página de resultados: la misma forma para cualquier listado (PageResponse en el backend). */
+export type Page<T> = { content: T[]; page: Schemas["PageMetadata"] };
 
 export type Problem = {
   type?: string;
@@ -16,50 +20,18 @@ export type Problem = {
   errors?: { field: string; message: string }[];
 };
 
-export type Role = "PATIENT" | "DOCTOR" | "ADMIN";
-
 /** El usuario autenticado, tal y como lo devuelve /api/v1/me. Sin datos clínicos: tendrán su propio módulo. */
-export type Me = {
-  id: string;
-  email: string;
-  role: Role;
-  firstName: string;
-  lastName: string;
-  phone: string | null;
-  locale: string;
-  emailVerified: boolean;
-};
+export type Me = Schemas["MeResponse"];
+export type Role = Me["role"];
+export type Session = Schemas["SessionResponse"];
+export type Registration = Schemas["RegistrationResponse"];
 
-export type Registration = { email: string; status: "PENDING_VERIFICATION" };
+export type Specialty = Schemas["SpecialtyResponse"];
+export type SpecialtyKind = Specialty["kind"];
+export type Facility = Schemas["FacilityResponse"];
+export type Doctor = Schemas["DoctorResponse"];
 
-export type SpecialtyKind = "MEDICAL" | "SURGICAL" | "DIAGNOSTIC" | "GENERAL" | "UNIT";
-
-export type Specialty = {
-  publicId: string;
-  slug: string;
-  name: string;
-  description: string;
-  kind: SpecialtyKind;
-  doctorCount: number;
-};
-
-export type Facility = {
-  publicId: string;
-  name: string;
-  address: string;
-  city: string;
-  phone: string;
-};
-
-export type Doctor = {
-  publicId: string;
-  firstName: string;
-  lastName: string;
-  licenseNumber: string;
-  bio: string;
-  specialty: { publicId: string; slug: string; name: string };
-  facilities: { publicId: string; name: string; city: string }[];
-};
+// ─── Pendiente de endpoint ──────────────────────────────────────────────────
 
 export type Slot = { startsAt: string; durationMin: number };
 
@@ -88,4 +60,3 @@ export type Report = {
   fileCount: number;
 };
 
-export type Session = { accessToken: string; user: Me };
