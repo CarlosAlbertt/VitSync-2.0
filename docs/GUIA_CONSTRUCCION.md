@@ -782,13 +782,13 @@ class ArchitectureTest {
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Appointment extends BaseEntity {   // id, publicId, createdAt, updatedAt, version
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "patient_id")
-    private PatientProfile patient;
+    // Paciente y médico son de iam: se referencian por id, no con @ManyToOne (ADR-0009).
+    // La FK sigue en la base de datos.
+    @Column(name = "patient_id", nullable = false, updatable = false)
+    private Long patientId;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "doctor_id")
-    private DoctorProfile doctor;
+    @Column(name = "doctor_id", nullable = false, updatable = false)
+    private Long doctorId;
 
     @Column(name = "starts_at", nullable = false)
     private Instant startsAt;
@@ -797,22 +797,23 @@ public class Appointment extends BaseEntity {   // id, publicId, createdAt, upda
     private AppointmentStatus status = AppointmentStatus.SCHEDULED;
 
     // constructor de fábrica con las invariantes
-    public static Appointment schedule(PatientProfile p, DoctorProfile d,
+    public static Appointment schedule(Long patientId, Long doctorId,
                                        Instant startsAt, Modality modality) {
         if (startsAt.isBefore(Instant.now())) {
             throw new BusinessException(ErrorCode.APPOINTMENT_IN_THE_PAST);
         }
         var a = new Appointment();
-        a.patient = p; a.doctor = d; a.startsAt = startsAt; a.modality = modality;
+        a.patientId = patientId; a.doctorId = doctorId;
+        a.startsAt = startsAt; a.modality = modality;
         return a;
     }
 
-    public void cancel(User by) {
+    public void cancel(Long byUserId) {
         if (status == AppointmentStatus.COMPLETED)
             throw new BusinessException(ErrorCode.APPOINTMENT_ALREADY_COMPLETED);
         status = AppointmentStatus.CANCELLED;
         cancelledAt = Instant.now();
-        cancelledBy = by.getId();
+        cancelledBy = byUserId;
     }
 }
 ```
@@ -855,18 +856,20 @@ public class BookAppointmentService {
 
     private final AppointmentRepository appointments;
     private final AvailabilityService availability;
+    private final DoctorDirectory doctors;          // iam.application (ADR-0009)
     private final OutboxPublisher outbox;
 
     @Transactional
     @Auditable(action = AuditAction.APPOINTMENT_CREATE)
     public AppointmentView book(UserId patientId, BookAppointmentCommand cmd) {
-        var patient = patients.getByUserId(patientId);
-        var doctor  = doctors.getByPublicId(cmd.doctorId());
+        // iam decide si el médico existe y acepta citas; scheduling solo guarda su id
+        var doctor = doctors.getBookable(cmd.doctorId());
 
         // 1) regla de negocio: el hueco existe en la agenda del médico
-        availability.assertSlotExists(doctor, cmd.startsAt());
+        availability.assertSlotExists(doctor.id(), cmd.startsAt());
 
-        var appointment = Appointment.schedule(patient, doctor, cmd.startsAt(), cmd.modality());
+        var appointment = Appointment.schedule(patientId.value(), doctor.id(),
+                                               cmd.startsAt(), cmd.modality());
 
         try {
             appointments.saveAndFlush(appointment);           // flush: el 409 salta aquí
