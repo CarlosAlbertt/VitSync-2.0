@@ -36,7 +36,7 @@ export function SpecialtiesPage() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-5">
+      <section className="mx-auto max-w-[90rem] px-5 lg:px-8">
         {isError ? (
           <ErrorState onRetry={() => refetch()} />
         ) : isPending ? (

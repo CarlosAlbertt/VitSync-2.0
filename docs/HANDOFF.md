@@ -67,6 +67,8 @@ endpoint. El alcance inicial era solo backend; el frontend se adelantó (ver DUD
   paciente, contra una API simulada (MSW). Job `web` en la CI.
 - **Frontend conectado (VIT-108)**: registro, verificación, acceso, sesión, recuperación y
   Mis datos usan la API real con `pnpm dev:api` (proxy de Vite). Probado de punta a punta.
+- **Portada nueva (VIT-109)**: basada en referencias del sector, sin fotos de archivo, y modo
+  oscuro en azul pizarra.
 - **`master` protegida** con un ruleset: PR obligatorio, CI verde, historial lineal.
 
 ### No hecho todavía

@@ -6,6 +6,41 @@
 
 ---
 
+## 2026-11-11 — Portada nueva y paleta del modo oscuro (VIT-109)
+
+### Contexto
+
+La portada del PR anterior no convencía: mucho margen a los lados, una foto de archivo poco
+creíble y un modo oscuro en negro verdoso con botones blancos. Se revisaron las portadas de
+Doctoralia, Top Doctors, Sanitas y Kry (Quirónsalud, Zocdoc, One Medical, Hims y Doctolib
+bloquean los navegadores automáticos) y se tomaron los patrones que se repiten.
+
+### Cambios realizados
+
+- **Portada** (`features/home`): cabecera en banda de color de marca con el buscador y lo más
+  buscado; cifras del catálogo montadas sobre la banda; servicios; especialidades; área del
+  paciente con una captura real (`public/portal-preview.webp`); especialistas con su próxima
+  hora; cómo pedir cita; centros; bloque para profesionales. Secciones con fondos alternos.
+- **Sin foto de archivo**: se retira `hero.webp`. En su lugar, fichas reales de la aplicación
+  (próximo hueco libre, videoconsulta y un resultado con su gráfica). El lateral de la pantalla
+  de entrar pasa a ser una banda de color.
+- **Pie** a todo el ancho en el color de marca, con columnas de enlaces y atención al paciente.
+- **Ancho**: las páginas públicas usan un contenedor de 1440 px.
+- **Paleta**: `--brand` pasa a teal profundo (#0c4a47) en claro; afecta también al banner de
+  la próxima cita del área del paciente. El modo oscuro cambia a azul pizarra con el teal del
+  logo como color de acción.
+- **Recarga forzada**: con Ctrl+F5 la página se carga sin el service worker de MSW y las
+  pantallas simuladas fallaban contra el backend. Si arranca sin el worker al mando, se recarga
+  una vez.
+
+### Verificación
+
+Tipos, lint, 28 tests y build. Capturas de la portada a 1440 px, 1920 px y 375 px (sin scroll
+horizontal), en claro y oscuro, y del área del paciente y de la pantalla de entrar en los dos
+modos.
+
+---
+
 ## 2026-11-05 — Autenticación del frontend contra la API real (VIT-108)
 
 ### Contexto
