@@ -138,7 +138,7 @@ function Header() {
 
   return (
     <header className="sticky top-0 z-30 border-b border-line bg-raised">
-      <div className="mx-auto flex h-18 max-w-7xl items-center justify-between gap-4 px-5">
+      <div className="mx-auto flex h-18 max-w-[90rem] items-center justify-between gap-4 px-5 lg:px-8">
         <div className="flex items-center gap-10">
           <Link to="/" aria-label="VitSync, inicio">
             <Logo />
@@ -179,35 +179,45 @@ function Header() {
   );
 }
 
+const FOOTER_LINKS: { title: string; links: [string, string][] }[] = [
+  { title: "Pacientes", links: [["Cuadro médico", "/profesionales"], ["Especialidades", "/especialidades"], ["Pedir cita", "/reservar"], ["Mi área", "/panel"]] },
+  { title: "Ayuda", links: [["Contacto", "/contacto"], ["Preguntas frecuentes", "/contacto"], ["Crear cuenta", "/registro"], ["Recuperar contraseña", "/recuperar"]] },
+];
+
 function Footer() {
   return (
-    <footer className="mt-24 border-t border-line bg-raised">
-      <div className="mx-auto grid max-w-7xl gap-8 px-5 py-12 md:grid-cols-3">
+    <footer className="bg-brand text-white">
+      <div className="mx-auto grid max-w-[90rem] gap-10 px-5 py-14 md:grid-cols-2 lg:grid-cols-[1.6fr_1fr_1fr_1.3fr] lg:px-8">
         <div>
-          <Logo />
-          <p className="mt-4 max-w-xs text-sm leading-relaxed text-ink-soft">Tu salud, gestionada en un solo lugar: especialistas, citas e informes.</p>
+          <Logo onDark />
+          <p className="mt-5 max-w-xs text-sm leading-relaxed text-white/80">Tu salud, gestionada en un solo lugar: especialistas, citas, resultados y videoconsulta.</p>
         </div>
+        {FOOTER_LINKS.map(({ title, links }) => (
+          <nav key={title} aria-label={title}>
+            <h2 className="font-semibold">{title}</h2>
+            <ul className="mt-4 grid gap-2.5 text-sm text-white/80">
+              {links.map(([label, to]) => (
+                <li key={label}>
+                  <Link to={to} className="hover:text-white hover:underline">
+                    {label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        ))}
         <div>
-          <h2 className="font-extrabold">Enlaces rápidos</h2>
-          <ul className="mt-3 grid gap-2 text-sm text-ink-soft">
-            {NAV.map((item) => (
-              <li key={item.to}>
-                <Link to={item.to} className="hover:text-accent">
-                  {item.label}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </div>
-        <div>
-          <h2 className="font-extrabold">Contacto</h2>
-          <ul className="mt-3 grid gap-2 text-sm text-ink-soft">
-            <li>Atención al paciente: {CONTACT.phone}</li>
-            <li>Email: {CONTACT.email}</li>
+          <h2 className="font-semibold">Atención al paciente</h2>
+          <ul className="mt-4 grid gap-2.5 text-sm text-white/80">
+            <li>{CONTACT.phone}</li>
+            <li>{CONTACT.email}</li>
+            <li>De lunes a viernes, de 8:00 a 20:00</li>
           </ul>
         </div>
       </div>
-      <p className="border-t border-line px-5 py-5 text-center text-sm text-ink-soft">Demostración: centros, profesionales y pacientes son ficticios. No introduzcas datos de salud reales.</p>
+      <div className="border-t border-white/15">
+        <p className="mx-auto max-w-[90rem] px-5 py-5 text-sm text-white/70 lg:px-8">© 2026 VitSync · Demostración: centros, profesionales y pacientes son ficticios. No introduzcas datos de salud reales.</p>
+      </div>
     </footer>
   );
 }
@@ -218,7 +228,7 @@ export function PublicLayout() {
     <div className="flex min-h-dvh flex-col">
       <SkipLink />
       <Header />
-      <main id="contenido" ref={main} tabIndex={-1} className="flex-1 outline-none">
+      <main id="contenido" ref={main} tabIndex={-1} className="flex-1 pb-20 outline-none">
         <Outlet />
       </main>
       <Footer />

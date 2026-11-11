@@ -28,7 +28,7 @@ export function DoctorsPage() {
   return (
     <>
       <section>
-        <div className="mx-auto max-w-7xl px-5 pt-12 pb-8 md:pt-16">
+        <div className="mx-auto max-w-[90rem] px-5 lg:px-8 pt-12 pb-8 md:pt-16">
           <h1 className="text-5xl font-black tracking-tighter md:text-6xl">
             Cuadro <span className="text-accent">médico</span>
           </h1>
@@ -54,7 +54,7 @@ export function DoctorsPage() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-5 pt-4">
+      <section className="mx-auto max-w-[90rem] px-5 lg:px-8 pt-4">
         {isError ? (
           <ErrorState onRetry={() => refetch()} />
         ) : isPending ? (

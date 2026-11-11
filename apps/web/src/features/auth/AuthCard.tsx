@@ -18,8 +18,9 @@ function BackLink() {
 
 function Aside() {
   return (
-    <aside className="relative hidden w-[45%] overflow-hidden bg-[url('/hero.webp')] bg-cover bg-center text-white lg:block">
-      <div aria-hidden className="absolute inset-0 bg-brand/90" />
+    <aside className="relative hidden w-[45%] overflow-hidden bg-brand text-white lg:block">
+      <span aria-hidden className="absolute -top-24 -right-24 size-96 rounded-full bg-white/6" />
+      <span aria-hidden className="absolute -bottom-20 -left-16 size-72 rounded-full bg-white/5" />
       <div className="relative flex h-full max-w-lg flex-col justify-center p-14">
         <img src="/logo.png" alt="" className="mb-6 size-16 rounded-2xl bg-white object-contain p-2" />
         <p className="font-semibold text-white/85">VitSync</p>

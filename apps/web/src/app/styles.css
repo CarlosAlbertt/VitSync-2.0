@@ -19,7 +19,7 @@
   --accent-strong: #000000;
   --accent-ink: #ffffff;
   --accent-wash: #dcf3ee;
-  --brand: #16201f;
+  --brand: #0c4a47; /* teal profundo de las bandas de marca: cabecera, pie y banners */
   --danger: #b3261e;
   --success: #1b6e43;
   --success-wash: #e3f4ea;
@@ -33,23 +33,24 @@
 }
 
 :root[data-theme="dark"] {
-  --canvas: #0f1413;
-  --subtle: #1f2725;
-  --raised: #171d1c;
-  --ink: #f2f5f4;
-  --ink-soft: #a7b1af;
-  --line: #2b3331;
-  --accent: #f2f5f4;
-  --accent-strong: #ffffff;
-  --accent-ink: #16201f;
-  --accent-wash: #1f3a36;
-  --brand: #1f2a28;
+  /* Azul pizarra con el teal del logo como color de acción: no un negro verdoso con botones blancos. */
+  --canvas: #0d141b;
+  --subtle: #121b24;
+  --raised: #17212b;
+  --ink: #e8eef3;
+  --ink-soft: #9eacba;
+  --line: #263341;
+  --accent: #3cc4b1;
+  --accent-strong: #6ad8c8;
+  --accent-ink: #062320;
+  --accent-wash: #12302f;
+  --brand: #0f2b30;
   --danger: #ffb0a3;
   --success: #8fe0b4;
-  --success-wash: #173527;
+  --success-wash: #133227;
   --warning: #f2c46d;
-  --warning-wash: #3a2e14;
-  --danger-wash: #3d1f1c;
+  --warning-wash: #33291a;
+  --danger-wash: #3a1f1f;
 
   --series-1: #3987e5;
   --series-2: #d95926;

@@ -93,7 +93,7 @@ export function ContactPage() {
         </div>
       </section>
 
-      <div className="relative z-10 mx-auto -mt-20 max-w-7xl px-5">
+      <div className="relative z-10 mx-auto -mt-20 max-w-[90rem] px-5 lg:px-8">
         <div className="mx-auto grid max-w-4xl gap-6 md:grid-cols-2">
           {ACTIONS.map((action) => (
             <Link key={action.to} to={action.to} className="card lift group flex flex-col items-center p-9 text-center">
