@@ -279,7 +279,7 @@ export const dataHandlers = [
 
 export const handlers = [latency, ...identityHandlers, ...dataHandlers];
 
-/** Modo "missing" (pnpm dev:api): la identidad la responde el backend real. */
+/** Modo "missing" (pnpm dev): la identidad la responde el backend real. */
 export const missingHandlers = [latency, ...dataHandlers];
 
 /** Para los tests: cada uno empieza con el mock limpio. */

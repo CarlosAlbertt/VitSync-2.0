@@ -66,7 +66,7 @@ endpoint. El alcance inicial era solo backend; el frontend se adelantó (ver DUD
 - **Frontend (VIT-23)**: `apps/web` en React 19 + TypeScript con todas las pantallas del
   paciente, contra una API simulada (MSW). Job `web` en la CI.
 - **Frontend conectado (VIT-108)**: registro, verificación, acceso, sesión, recuperación y
-  Mis datos usan la API real con `pnpm dev:api` (proxy de Vite). Probado de punta a punta.
+  Mis datos usan la API real con `pnpm dev` (proxy de Vite). Probado de punta a punta.
 - **Portada nueva (VIT-109)**: basada en referencias del sector, sin fotos de archivo, y modo
   oscuro en azul pizarra.
 - **`master` protegida** con un ruleset: PR obligatorio, CI verde, historial lineal.
@@ -145,7 +145,12 @@ ver la entrada "Plan del Sprint 1" en [DUDAS_Y_CAMBIOS](DUDAS_Y_CAMBIOS.md).
 
    7. ~~Conectar la autenticación del frontend a la API real~~ — VIT-108.
 
-   **Siguiente**: el Sprint 2 (catálogo y citas), con las referencias entre módulos según
+   **Sprint 2 en curso**: especialidades, centros y datos de demostración (VIT-76, VIT-77 y
+   VIT-81) en un PR, con la base de demostración `vitsync_dev` (perfil `demo`) y `pnpm dev`
+   contra la API real. Después, el cuadro médico (VIT-78), las pantallas contra la API real
+   (VIT-80) y las enfermedades (VIT-79).
+
+   **Siguiente**: el resto del Sprint 2 (catálogo y citas), con las referencias entre módulos según
    [ADR-0009](adr/0009-referencias-entre-modulos-por-id.md), sustituyendo en el frontend cada
    pantalla simulada por su endpoint según exista.
    Pendientes técnicos anotados en DUDAS_Y_CAMBIOS: rate limiting por IP (Bucket4j), limpieza

@@ -4,7 +4,7 @@
   "packageManager": "pnpm@9.15.9",
   "scripts": {
     "web": "pnpm --filter web dev",
-    "web:api": "pnpm --filter web dev:api",
+    "web:mocks": "pnpm --filter web dev:mocks",
     "web:test": "pnpm --filter web test"
   }
 }

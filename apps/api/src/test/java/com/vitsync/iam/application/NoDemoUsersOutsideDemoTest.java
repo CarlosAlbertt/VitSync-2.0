@@ -7,8 +7,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 
-/** Fuera del perfil {@code local} el seeder ni siquiera existe como bean (VIT-67). */
-class NoDemoUsersOutsideLocalTest extends IntegrationTest {
+/** Sin el perfil {@code demo} (como en producción) el seeder ni siquiera existe como bean (VIT-67). */
+class NoDemoUsersOutsideDemoTest extends IntegrationTest {
 
     @Autowired ApplicationContext context;
 

@@ -75,6 +75,18 @@ public class DoctorProfile {
         return d;
     }
 
+    /**
+     * La especialidad es de {@code catalog}: aquí solo se guarda su id (ADR-0009). Que exista
+     * lo garantiza la FK; que esté activa lo decide {@code catalog} antes de llamar.
+     */
+    public void assignSpecialty(Long specialtyId) {
+        this.specialtyId = Objects.requireNonNull(specialtyId);
+    }
+
+    public void updateBio(String bio) {
+        this.bio = bio;
+    }
+
     @Override
     public boolean equals(Object o) {
         return this == o || (o instanceof DoctorProfile other && userId != null && userId.equals(other.userId));

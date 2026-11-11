@@ -25,9 +25,9 @@ tests de integración arrancan un PostgreSQL real con Testcontainers
 ## 2. Arrancar el proyecto
 
 ```bash
-docker compose up -d                 # Postgres 16 + MinIO + Mailpit
+docker compose up -d                 # Postgres 16 (vitsync y vitsync_dev) + MinIO + Mailpit
 cd apps/api
-./mvnw spring-boot:run -Dspring-boot.run.profiles=local
+./mvnw spring-boot:run "-Dspring-boot.run.profiles=local,demo"
 ```
 
 Comprobación: `curl http://localhost:8080/actuator/health` → `{"status":"UP"}`.
@@ -43,8 +43,24 @@ Servicios locales:
 
 ### Usuarios de demostración (solo perfil `local`)
 
-Al arrancar con el perfil `local` se crean, si no existen, tres cuentas activas con datos
-sintéticos. Fuera de `local` no se crea ninguna.
+Hay dos bases de datos en el mismo contenedor de PostgreSQL:
+
+| Base | Perfiles | Para qué |
+|---|---|---|
+| `vitsync_dev` | `local,demo` | Desarrollo diario: usuarios y catálogo de demostración |
+| `vitsync` | `local` | Probar flujos desde cero (registro, verificación...) sobre una base vacía |
+
+`vitsync_dev` la crea el servicio `db-init` del compose al hacer `docker compose up -d`.
+
+```bash
+./mvnw spring-boot:run "-Dspring-boot.run.profiles=local,demo"   # make api
+./mvnw spring-boot:run "-Dspring-boot.run.profiles=local"        # make api-empty
+```
+
+En PowerShell el `-D...` va entre comillas; si no, PowerShell parte el argumento.
+
+Con el perfil `demo` se crean al arrancar, si no existen, tres cuentas activas con datos
+sintéticos. Sin `demo` no se crea ninguna: ni en la base vacía ni en producción.
 
 | Rol | Email | Contraseña |
 |---|---|---|
@@ -55,6 +71,15 @@ sintéticos. Fuera de `local` no se crea ninguna.
 ```bash
 curl -i -X POST localhost:8080/api/v1/auth/login -H 'Content-Type: application/json' \
   -d '{"email":"paciente@vitsync.test","password":"Demostracion-2026"}'
+```
+
+Además se crea el **catálogo de demostración**: 12 especialidades, 4 centros y un cuadro
+médico de 15 profesionales (`nombre.apellido@vitsync.test`, misma contraseña) con su
+especialidad y sus centros. Son los mismos datos que muestra el frontend simulado, así que
+cambiar de `pnpm dev:mocks` a `pnpm dev` no cambia lo que se ve.
+
+```bash
+curl -s 'localhost:8080/api/v1/specialties?q=cardiologia'
 ```
 
 Los emails (verificación, recuperación) se ven en Mailpit. Las claves JWT de `local` se
@@ -85,30 +110,32 @@ cd apps/api && ./mvnw spring-boot:run -Dspring-boot.run.profiles=local
 
 ### Frontend
 
+Con la API arrancada (`make api`, perfiles `local,demo`):
+
 ```bash
 corepack pnpm install
 corepack pnpm --filter web dev      # http://localhost:5173
 ```
 
-No necesita el backend: en desarrollo, la API la simula MSW con la forma del contrato
-(`apps/web/src/test/mocks`). En la pantalla de acceso hay un botón para entrar con la cuenta
-de demostración; el código de verificación de la demo es `123456`.
+Lo que ya tiene endpoint (`/auth/*` y `/me` hoy; el catálogo cuando las pantallas se conecten,
+VIT-80) va al backend a través del proxy de Vite (`/api` → `localhost:8080`): mismo origen,
+así que la cookie del refresh funciona sin CORS. El resto (citas, informes, mensajes y el
+área del paciente) lo simula MSW (`apps/web/src/test/mocks`) hasta que tenga endpoint. Los
+códigos de un solo uso llegan a Mailpit (http://localhost:8025).
 
-Para probar contra el backend real, arráncalo con el perfil `local` y lanza el modo API:
+Sin backend ni Docker, con todo simulado:
 
 ```bash
-corepack pnpm --filter web dev:api  # http://localhost:5173
+corepack pnpm --filter web dev:mocks  # http://localhost:5173
 ```
 
-En ese modo, `/auth/*` y `/me` van al backend a través del proxy de Vite (`/api` →
-`localhost:8080`): mismo origen, así que la cookie del refresh funciona sin CORS. El resto
-(catálogo, citas, informes y el área del paciente) sigue simulado hasta que tenga endpoint.
-Los códigos de un solo uso llegan a Mailpit (http://localhost:8025).
+En ese modo, en la pantalla de acceso hay un botón para entrar con la cuenta de
+demostración, y el código de verificación es siempre `123456`.
 
 | `VITE_API_MOCKS` | Qué se simula | Cuándo |
 |---|---|---|
-| `all` | Todo | `pnpm dev` (por defecto en desarrollo) y tests |
-| `missing` | Solo lo que el backend aún no tiene | `pnpm dev:api` |
+| `missing` | Solo lo que el backend aún no tiene | `pnpm dev` (por defecto en desarrollo) |
+| `all` | Todo | `pnpm dev:mocks` y tests |
 | `none` | Nada | Build de producción (por defecto) |
 
 Si cambia el contrato de `/auth` o `/me`, el mock (`identityHandlers`) se actualiza en el
