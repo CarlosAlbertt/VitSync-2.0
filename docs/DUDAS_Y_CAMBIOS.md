@@ -6,6 +6,30 @@
 
 ---
 
+## 2026-11-11 — Referencias entre módulos por id (VIT-110, ADR-0009)
+
+### Contexto
+
+Q13 seguía abierta y bloqueaba las slices de catálogo y citas: el ejemplo de la guía modela
+la cita con `@ManyToOne` hacia los perfiles de `iam`, y `ArchitectureTest` no lo permite.
+
+### Decisión
+
+[ADR-0009](adr/0009-referencias-entre-modulos-por-id.md): entre módulos se referencia por id
+(`patientId`, `doctorId`, `facilityId`) con la FK en la base de datos; los datos de otro
+módulo se piden a su capa `application`, que devuelve *records*, y en los listados siempre
+por lote. Dentro de un módulo, las relaciones JPA siguen siendo libres.
+
+### Cambios realizados
+
+- `docs/adr/0009-referencias-entre-modulos-por-id.md` y su fila en el índice.
+- Guía, Fase 4.3 y 5.2: `Appointment` y `BookAppointmentService` usan ids y `DoctorDirectory`.
+- Comentarios de `ArchitectureTest` y `DoctorProfile`: apuntan al ADR en vez de a Q13.
+
+Sin cambios de comportamiento: la regla ya la imponía `ArchitectureTest`.
+
+---
+
 ## 2026-11-11 — Portada nueva y paleta del modo oscuro (VIT-109)
 
 ### Contexto
@@ -638,7 +662,7 @@ entidad de otro.
 
 La regla de módulos prohíbe que una entidad de un módulo referencie una entidad de otro. El
 ejemplo de la Fase 5 de la guía lo hace (`Appointment` → `@ManyToOne PatientProfile`, de
-`iam`). Ver Q13.
+`iam`). Ver Q13, resuelta en [ADR-0009](adr/0009-referencias-entre-modulos-por-id.md).
 
 ---
 
@@ -1104,7 +1128,6 @@ VitSync-2.0/
 | Q5 | **IntelliJ apunta al módulo antiguo** | Acción manual | `.idea/` referencia la ruta anterior. Recargar abriendo `apps/api/pom.xml` como proyecto Maven (o *File → Invalidate Caches*). No afecta al repo: `.idea/` está ignorado. |
 | Q7 | **Licencia** | Abierta | MIT previsto, sin decidir. Mientras no exista el fichero `LICENSE`, el repositorio es legalmente "todos los derechos reservados" aunque esté público. Es lo único del Sprint 0 que sigue sin cerrar. |
 | Q9 | **Tablero de Jira sin montar** | Pendiente | [JIRA_SETUP.md](JIRA_SETUP.md) y `scripts/jira/backlog.json` están listos; falta ejecutarlo. Es una acción manual con credenciales, no automatizable desde aquí. |
-| Q13 | **Referencias entre módulos: por id o por entidad JPA** | Abierta | `ArchitectureTest` exige que un módulo solo use de otro su capa `application`, así que una entidad no puede tener `@ManyToOne` a una entidad de otro módulo (el ejemplo de la Fase 5 de la guía sí lo hace). Propuesta: guardar el id (`patientId`, `doctorId`) y pedir los datos al `application` del otro módulo; la FK se mantiene en la BD, así que la integridad no se pierde, solo el acoplamiento en Java. Es discutible y cara de revertir: se cierra con un ADR antes de la slice de citas. |
 
 ## Dudas resueltas
 
@@ -1118,3 +1141,4 @@ VitSync-2.0/
 | Q11 | `./mvnw` versionado sin permiso de ejecución | **Resuelta**: `100755` en el índice; desbloquea la primera ejecución de la CI y con ella Q10 · 2026-10-01 |
 | Q10 | Protección de `master` sin configurar | **Resuelta**: ruleset activo sobre `master` con PR obligatorio, checks `api (build + tests)` y `escaneo de secretos` obligatorios, historial lineal y sin force-push ni borrado · 2026-10-22 |
 | Q12 | Versionado de API: prefijo `/api/v1` o el nativo de Spring Framework 7 | **Prefijo `/api/v1`** en el `@RequestMapping` de cada controlador; el nativo afecta a todas las rutas y choca con `/v3/api-docs` · 2026-10-22 |
+| Q13 | Referencias entre módulos: por id o por entidad JPA | **Por id**, con la FK en la base de datos y los datos pedidos a la capa `application` del otro módulo — [ADR-0009](adr/0009-referencias-entre-modulos-por-id.md) · 2026-11-11 |

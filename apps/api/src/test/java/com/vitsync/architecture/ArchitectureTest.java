@@ -70,7 +70,7 @@ class ArchitectureTest {
     // Un módulo solo puede usar de otro su capa application: nunca sus controladores,
     // entidades ni repositorios. @ParameterizedTest ejecuta el método una vez por cada
     // valor de @ValueSource, así cada módulo sale como un caso separado en el informe.
-    // Consecuencia: entre módulos se referencia por id, no por entidad JPA (Q13).
+    // Consecuencia: entre módulos se referencia por id, no por entidad JPA (ADR-0009).
     @ParameterizedTest
     @ValueSource(strings = {"iam", "catalog", "scheduling", "clinical", "gdpr", "notification"})
     void other_modules_only_use_the_application_layer(String module){

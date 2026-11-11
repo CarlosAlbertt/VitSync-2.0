@@ -17,6 +17,7 @@ Plantilla: [`0000-template.md`](0000-template.md).
 | [0006](0006-almacenamiento-de-ficheros-s3.md) | Ficheros en S3-compatible con URLs prefirmadas | Aceptado |
 | [0007](0007-estrategia-de-tiempo-real.md) | SSE para notificaciones, STOMP para el chat | Aceptado |
 | [0008](0008-estrategia-de-pruebas.md) | Testcontainers en vez de H2, y pirámide de pruebas | Aceptado |
+| [0009](0009-referencias-entre-modulos-por-id.md) | Referencias entre módulos por id, no por entidad JPA | Aceptado |
 
 Las decisiones de partida están resumidas en el
 [HANDOFF §3](../HANDOFF.md#3-decisiones-ya-cerradas-no-volver-a-abrirlas-sin-un-adr);

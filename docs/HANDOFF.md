@@ -132,8 +132,8 @@ ver la entrada "Plan del Sprint 1" en [DUDAS_Y_CAMBIOS](DUDAS_Y_CAMBIOS.md).
    3.1.1, `ProblemDetail` (RFC 9457) con `code` y `traceId`, y `docs/openapi.json`
    versionado. Versionado de la API cerrado el 2026-10-22: prefijo `/api/v1` (Q12).
 3. ~~**Estructura del backend** (guía, Fase 4)~~ — **hecho el 2026-10-22**: seis módulos y
-   `ArchitectureTest`. Antes de la slice de citas hay que cerrar con un ADR cómo se
-   referencian los módulos entre sí (Q13 en [DUDAS_Y_CAMBIOS](DUDAS_Y_CAMBIOS.md)).
+   `ArchitectureTest`. Entre módulos se referencia por id, no por entidad JPA:
+   [ADR-0009](adr/0009-referencias-entre-modulos-por-id.md) (2026-11-11, cierra Q13).
 4. **Autenticación, en seis PR**, por este orden:
    1. ~~Cifrado base (`common/crypto`)~~ — **mergeado el 2026-11-04** (VIT-71 + VIT-72).
    2. ~~Registro de pacientes~~ — **mergeado el 2026-11-04** (VIT-61).
@@ -145,8 +145,9 @@ ver la entrada "Plan del Sprint 1" en [DUDAS_Y_CAMBIOS](DUDAS_Y_CAMBIOS.md).
 
    7. ~~Conectar la autenticación del frontend a la API real~~ — VIT-108.
 
-   **Siguiente**: el ADR de referencias entre módulos (Q13) y después el Sprint 2 (catálogo y
-   citas), sustituyendo en el frontend cada pantalla simulada por su endpoint según exista.
+   **Siguiente**: el Sprint 2 (catálogo y citas), con las referencias entre módulos según
+   [ADR-0009](adr/0009-referencias-entre-modulos-por-id.md), sustituyendo en el frontend cada
+   pantalla simulada por su endpoint según exista.
    Pendientes técnicos anotados en DUDAS_Y_CAMBIOS: rate limiting por IP (Bucket4j), limpieza
    de `refresh_tokens` caducados, readiness tras el seeder demo y un endpoint para los datos
    clínicos del paciente.
