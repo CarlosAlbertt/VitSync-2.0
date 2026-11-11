@@ -12,6 +12,9 @@
     "bearerAuth" : [ ]
   } ],
   "tags" : [ {
+    "description" : "Public catalog: specialties, facilities and doctors",
+    "name" : "Catalog"
+  }, {
     "description" : "The authenticated user",
     "name" : "Me"
   }, {
@@ -290,6 +293,59 @@
         "tags" : [ "Auth" ]
       }
     },
+    "/api/v1/facilities" : {
+      "get" : {
+        "description" : "Sorted by city and then by name.",
+        "operationId" : "list_1",
+        "parameters" : [ {
+          "description" : "Zero-based page number",
+          "in" : "query",
+          "name" : "page",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 0,
+            "minimum" : 0
+          }
+        }, {
+          "in" : "query",
+          "name" : "size",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 20,
+            "maximum" : 100,
+            "minimum" : 1
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PageResponseFacilityResponse"
+                }
+              }
+            },
+            "description" : "A page of facilities"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "VALIDATION_FAILED"
+          }
+        },
+        "summary" : "List active facilities",
+        "tags" : [ "Catalog" ]
+      }
+    },
     "/api/v1/me" : {
       "get" : {
         "operationId" : "me",
@@ -366,10 +422,110 @@
         "summary" : "Update the authenticated user's own data",
         "tags" : [ "Me" ]
       }
+    },
+    "/api/v1/specialties" : {
+      "get" : {
+        "description" : "Sorted by name. The text search matches the name with or without accents.",
+        "operationId" : "list",
+        "parameters" : [ {
+          "description" : "Free text over the name",
+          "in" : "query",
+          "name" : "q",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "maxLength" : 80,
+            "minLength" : 0
+          }
+        }, {
+          "in" : "query",
+          "name" : "kind",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "enum" : [ "MEDICAL", "SURGICAL", "DIAGNOSTIC", "GENERAL", "UNIT" ]
+          }
+        }, {
+          "description" : "Zero-based page number",
+          "in" : "query",
+          "name" : "page",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 0,
+            "minimum" : 0
+          }
+        }, {
+          "in" : "query",
+          "name" : "size",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 20,
+            "maximum" : 100,
+            "minimum" : 1
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PageResponseSpecialtyResponse"
+                }
+              }
+            },
+            "description" : "A page of specialties"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "VALIDATION_FAILED or MALFORMED_REQUEST (unknown kind)"
+          }
+        },
+        "summary" : "List active specialties",
+        "tags" : [ "Catalog" ]
+      }
     }
   },
   "components" : {
     "schemas" : {
+      "FacilityResponse" : {
+        "type" : "object",
+        "properties" : {
+          "address" : {
+            "type" : "string",
+            "example" : "Paseo de la Ribera 12"
+          },
+          "city" : {
+            "type" : "string",
+            "example" : "València"
+          },
+          "name" : {
+            "type" : "string",
+            "example" : "Centro Jardín del Turia"
+          },
+          "phone" : {
+            "type" : [ "string", "null" ],
+            "example" : "+34 960 000 010"
+          },
+          "postalCode" : {
+            "type" : "string",
+            "example" : "46010"
+          },
+          "publicId" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }
+      },
       "LoginRequest" : {
         "type" : "object",
         "properties" : {
@@ -420,6 +576,59 @@
           "role" : {
             "type" : "string",
             "enum" : [ "PATIENT", "DOCTOR", "ADMIN" ]
+          }
+        }
+      },
+      "PageMetadata" : {
+        "type" : "object",
+        "properties" : {
+          "number" : {
+            "type" : "integer",
+            "format" : "int32",
+            "example" : 0
+          },
+          "size" : {
+            "type" : "integer",
+            "format" : "int32",
+            "example" : 20
+          },
+          "totalElements" : {
+            "type" : "integer",
+            "format" : "int64",
+            "example" : 12
+          },
+          "totalPages" : {
+            "type" : "integer",
+            "format" : "int32",
+            "example" : 1
+          }
+        }
+      },
+      "PageResponseFacilityResponse" : {
+        "type" : "object",
+        "properties" : {
+          "content" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/FacilityResponse"
+            }
+          },
+          "page" : {
+            "$ref" : "#/components/schemas/PageMetadata"
+          }
+        }
+      },
+      "PageResponseSpecialtyResponse" : {
+        "type" : "object",
+        "properties" : {
+          "content" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/SpecialtyResponse"
+            }
+          },
+          "page" : {
+            "$ref" : "#/components/schemas/PageMetadata"
           }
         }
       },
@@ -553,6 +762,37 @@
           },
           "user" : {
             "$ref" : "#/components/schemas/MeResponse"
+          }
+        }
+      },
+      "SpecialtyResponse" : {
+        "type" : "object",
+        "properties" : {
+          "description" : {
+            "type" : [ "string", "null" ],
+            "example" : "Corazón y sistema circulatorio, de la prevención al seguimiento."
+          },
+          "doctorCount" : {
+            "type" : "integer",
+            "format" : "int64",
+            "description" : "Doctors currently listed in this specialty",
+            "example" : 2
+          },
+          "kind" : {
+            "type" : "string",
+            "enum" : [ "MEDICAL", "SURGICAL", "DIAGNOSTIC", "GENERAL", "UNIT" ]
+          },
+          "name" : {
+            "type" : "string",
+            "example" : "Cardiología"
+          },
+          "publicId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "slug" : {
+            "type" : "string",
+            "example" : "cardiologia"
           }
         }
       },

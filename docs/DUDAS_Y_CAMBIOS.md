@@ -6,6 +6,96 @@
 
 ---
 
+## 2026-11-11 — Base de datos de demostración y frontend contra la API real (VIT-81)
+
+### Contexto
+
+Se pidió desarrollar contra datos reales en una base propia en vez de contra la API simulada.
+La base de datos ya iba en su contenedor (`vitsync-db`); lo que faltaba era separar los datos
+de demostración y que el frontend en desarrollo hablara con el backend por defecto.
+
+### Cambios realizados
+
+- **Dos bases en el mismo contenedor**: `vitsync_dev` (datos de demostración) y `vitsync`
+  (vacía, para probar flujos desde cero). `vitsync_dev` la crea un servicio de un solo uso del
+  compose (`db-init`), idempotente; no un script de `/docker-entrypoint-initdb.d`, que solo se
+  ejecuta con el volumen vacío y no habría llegado a los entornos que ya existían.
+- **Perfil `demo`** (`application-demo.properties`): apunta a `vitsync_dev` y activa los dos
+  seeders, que pasan de `@Profile("local")` a `@Profile("demo")`. Se arranca con
+  `local,demo` (`make api`); `local` solo usa la base vacía (`make api-empty`). Es el "perfil
+  demo" que pedía el criterio de VIT-81.
+- **Frontend**: `pnpm dev` pasa a ir contra la API real (modo `missing`: MSW solo simula lo
+  que aún no tiene endpoint). El modo con todo simulado queda como `pnpm dev:mocks`.
+  Desaparece `dev:api`, que es ahora el comportamiento por defecto.
+
+### A tener en cuenta
+
+- Con un volumen de Docker anterior, la base `vitsync` conserva los usuarios demo que creó el
+  Sprint 1. No molestan; para dejarla vacía de verdad: `docker compose down -v` (borra también
+  `vitsync_dev`, que se vuelve a sembrar al arrancar la API con `demo`).
+- El catálogo del frontend sigue simulado hasta VIT-80: los ids de los centros simulados
+  (`fac-turia`) no coinciden con los reales (UUID), y el cuadro médico (VIT-78) aún no existe;
+  mezclar las dos fuentes rompería los filtros. Se conecta todo a la vez.
+
+---
+
+## 2026-11-11 — Catálogo: especialidades, centros y datos de demostración (VIT-76, VIT-77, VIT-81)
+
+### Contexto
+
+Primer PR del Sprint 2 y primera aplicación de [ADR-0009](adr/0009-referencias-entre-modulos-por-id.md):
+`catalog` necesita saber cuántos médicos tiene cada especialidad, y los médicos son de `iam`.
+
+### Cambios realizados
+
+- **`GET /api/v1/specialties`**: público, paginado (`page` desde 0, `size` hasta 100), solo
+  activas, por nombre. Filtros `q` (texto libre, con o sin tildes: se compara también con el
+  slug) y `kind`. Cada especialidad trae `doctorCount`, que `catalog` pide a `iam` para toda la
+  página en una consulta (`DoctorDirectory.countListedBySpecialty`).
+- **`GET /api/v1/facilities`**: público, paginado, solo activos, por ciudad y nombre.
+- **`PageResponse`** (`common/web`): `{content, page: {number, size, totalElements, totalPages}}`,
+  la forma que ya esperaba el frontend. Se escribe a mano porque la serialización de `PageImpl`
+  de Spring Data no es un contrato estable.
+- **Parámetros inválidos** (`@Min`, `@Max`, `@Size` en la URL): `400 VALIDATION_FAILED` con el
+  parámetro que falla, igual que un cuerpo inválido. Antes habrían salido como
+  `MALFORMED_REQUEST`.
+- **Datos de demostración** (solo perfil `local`): `DemoUsersSeeder` crea además 15 médicos y
+  `CatalogDemoSeeder` (después, con `@Order`) las especialidades, los centros y la especialidad y
+  los centros de cada médico, incluido `medico@vitsync.test`. Los dos se enlazan por número de
+  colegiado. Mismos textos que el frontend simulado.
+- **`doctor_facilities`** pertenece a `catalog` (lo dice su `package-info`): se escribe con una
+  consulta nativa idempotente, sin entidad, porque es una tabla de enlace sin datos propios.
+
+### Dirección de la dependencia entre módulos
+
+`catalog` depende de `iam` (por su capa `application`) y nunca al revés: `ArchitectureTest`
+prohíbe los ciclos. Por eso la especialidad del médico la asigna `catalog` llamando a
+`DoctorDirectory.assignSpecialty`, y no `iam` leyendo el catálogo. El cuadro médico
+(`GET /api/v1/doctors`, VIT-78) seguirá la misma dirección.
+
+### Pendiente anotado
+
+- **Catálogo en producción**: el seed es solo de `local`. En producción el catálogo lo dará de
+  alta el panel de administración (Sprint 6); para el despliegue de demostración (Sprint 8)
+  habrá que decidir cómo se carga.
+- **Búsqueda sin tildes**: se resuelve comparando también con el slug. Si el catálogo crece
+  (enfermedades, VIT-79), valorar la extensión `unaccent` de PostgreSQL.
+
+### Verificación
+
+Tests nuevos: `SpecialtiesApiTest` (paginación, orden, filtros, tildes, comodines literales,
+recuento de médicos, validación, escritura cerrada), `FacilitiesApiTest`, `SearchPatternsTest`,
+`CatalogDemoSeederTest` (incluida la idempotencia) y `NoCatalogDemoOutsideLocalTest`.
+`./mvnw verify` → **152 tests en verde**.
+
+De paso se corrige un test intermitente que no es de este PR: `OutboxWorkerTest` forzaba el
+último reintento con `next_attempt_at = now()`, que es la hora de PostgreSQL (en Docker),
+mientras el worker compara con la de la JVM. Con el reloj del contenedor unos ms por delante
+(pasa justo después de arrancar Docker Desktop) el mensaje aún no tocaba y el test fallaba.
+Ahora se pone un minuto en el pasado.
+
+---
+
 ## 2026-11-11 — Referencias entre módulos por id (VIT-110, ADR-0009)
 
 ### Contexto

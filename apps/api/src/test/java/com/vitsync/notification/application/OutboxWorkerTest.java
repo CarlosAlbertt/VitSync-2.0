@@ -78,8 +78,11 @@ class OutboxWorkerTest extends IntegrationTest {
         // El error se guarda sin el mensaje, que aquí contiene el destinatario.
         assertThat((String) row.get("last_error")).isEqualTo(MailSendException.class.getName()).doesNotContain(to);
 
-        // Último intento: se fuerza a que toque ya, con 7 intentos previos.
-        jdbc.update("UPDATE outbox_messages SET attempts = 7, next_attempt_at = now() WHERE id = ?", id);
+        // Último intento: se fuerza a que toque ya, con 7 intentos previos. Un minuto en el
+        // pasado y no now(): now() es la hora de PostgreSQL (en Docker) y el worker compara con
+        // la de la JVM; si el reloj del contenedor va unos ms por delante, el mensaje aún no toca.
+        jdbc.update("UPDATE outbox_messages SET attempts = 7, next_attempt_at = now() - interval '1 minute' "
+                + "WHERE id = ?", id);
         drain();
         assertThat(status(id)).isEqualTo("FAILED");
     }

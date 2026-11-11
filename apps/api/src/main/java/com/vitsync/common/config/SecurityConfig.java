@@ -67,6 +67,10 @@ public class SecurityConfig {
                                 // logout funciona solo con la cookie: así se puede cerrar
                                 // sesión aunque el access token ya haya caducado.
                                 "/api/v1/auth/logout").permitAll()
+                        // Catálogo público: se consulta antes de tener cuenta. Solo lectura;
+                        // cualquier escritura (panel de administración) sigue cerrada.
+                        .requestMatchers(HttpMethod.GET, "/api/v1/specialties", "/api/v1/specialties/**",
+                                "/api/v1/facilities", "/api/v1/facilities/**").permitAll()
                         // Todo lo demás, con usuario autenticado.
                         .anyRequest().authenticated())
                 // Bearer JWT. El entry point propio sustituye al de Spring, que respondería un

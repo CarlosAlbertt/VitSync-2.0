@@ -24,6 +24,24 @@ services:
       timeout: 5s
       retries: 10
 
+  # Segunda base de datos en el mismo contenedor: vitsync_dev, la de los datos de
+  # demostración (perfil "demo" de la API). La de siempre, vitsync, queda vacía para probar
+  # flujos desde cero. Se crea con un servicio de un solo uso y no con un script de
+  # /docker-entrypoint-initdb.d porque esos solo se ejecutan con el volumen vacío: así también
+  # funciona en un entorno que ya existía. Idempotente.
+  db-init:
+    image: postgres:16-alpine
+    container_name: vitsync-db-init
+    depends_on:
+      db: { condition: service_healthy }
+    environment:
+      PGPASSWORD: vitsync
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        psql -h db -U vitsync -d vitsync -tAc "SELECT 1 FROM pg_database WHERE datname = 'vitsync_dev'" | grep -q 1           || psql -h db -U vitsync -d vitsync -c "CREATE DATABASE vitsync_dev"
+        echo "base de datos vitsync_dev lista"
+
   # S3 local. La consola queda en http://localhost:9001 (minio / minio12345).
   minio:
     image: quay.io/minio/minio

@@ -36,26 +36,27 @@ Testcontainers).
 
 ```bash
 docker compose up -d                                        # Postgres + MinIO + Mailpit
-cd apps/api && ./mvnw spring-boot:run -Dspring-boot.run.profiles=local
+cd apps/api && ./mvnw spring-boot:run "-Dspring-boot.run.profiles=local,demo"
 curl http://localhost:8080/actuator/health                  # → {"status":"UP"}
 ```
 
-Sin variables de entorno: el perfil `local` ya apunta al compose. PostgreSQL se publica en
-el **5433** del host para no chocar con un PostgreSQL instalado en la máquina. Detalle
-completo en [CONTRIBUTING.md](CONTRIBUTING.md).
+Sin variables de entorno: el perfil `local` ya apunta al compose y `demo` usa la base de datos
+de demostración (`vitsync_dev`), con usuarios y catálogo. PostgreSQL se publica en el **5433**
+del host para no chocar con un PostgreSQL instalado en la máquina. Detalle completo en
+[CONTRIBUTING.md](CONTRIBUTING.md).
 
-La interfaz se puede ver sin backend ni Docker, con una API simulada. Requisito: **Node 22**.
+Con el backend arrancado, el frontend usa la API real para todo lo que ya tiene endpoint y
+simula solo lo que falta. Requisito: **Node 22**.
 
 ```bash
 corepack pnpm install
 corepack pnpm --filter web dev                                   # http://localhost:5173
 ```
 
-Con el backend arrancado (comandos de arriba), `dev:api` usa la API real para la identidad
-(registro, acceso, sesión, recuperación y Mis datos) y la simulada para lo demás:
+Para ver la interfaz sin backend ni Docker, con todo simulado:
 
 ```bash
-corepack pnpm --filter web dev:api                               # http://localhost:5173
+corepack pnpm --filter web dev:mocks                             # http://localhost:5173
 ```
 
 Cuenta de demostración en los dos modos: `paciente@vitsync.test` / `Demostracion-2026`. Con la

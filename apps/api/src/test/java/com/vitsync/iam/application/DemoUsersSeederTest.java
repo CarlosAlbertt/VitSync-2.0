@@ -14,13 +14,15 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
 /**
- * Usuarios demo con el perfil {@code local} (VIT-67).
+ * Usuarios demo con el perfil {@code demo} (VIT-67).
  *
  * <p>El worker del outbox se apaga a mano: el perfil local lo enciende, y un worker vivo en
  * este contexto cogería los mensajes de otros tests (la BD es común) y los haría fallar al no
  * haber Mailpit.
  */
-@ActiveProfiles("local")
+// local + demo, como se arranca en desarrollo. La URL de vitsync_dev del perfil demo no se
+// usa: @ServiceConnection la sustituye por la del contenedor de Testcontainers.
+@ActiveProfiles({"local", "demo"})
 @TestPropertySource(properties = "vitsync.outbox.worker.enabled=false")
 class DemoUsersSeederTest extends IntegrationTest {
 

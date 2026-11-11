@@ -8,6 +8,7 @@ import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
@@ -79,6 +80,21 @@ class GlobalExceptionHandler extends ResponseEntityExceptionHandler
 
         // Se delega en el método común de la clase padre para que monte la respuesta.
         return handleExceptionInternal(ex,pd,headers, status, request);
+    }
+
+    // 400 por restricciones en parámetros de la URL (@Min, @Max, @Size en un @RequestParam).
+    // Spring lanza HandlerMethodValidationException; sin esto acabaría como MALFORMED_REQUEST,
+    // y es el mismo caso que un cuerpo inválido: VALIDATION_FAILED con el parámetro que falla.
+    @Override
+    protected ResponseEntity<Object> handleHandlerMethodValidationException(HandlerMethodValidationException ex,
+            HttpHeaders headers, HttpStatusCode status, WebRequest request) {
+        ProblemDetail pd = ProblemDetails.of(ErrorCode.VALIDATION_FAILED);
+        pd.setProperty("errors", ex.getParameterValidationResults().stream()
+                .flatMap(r -> r.getResolvableErrors().stream()
+                        .map(e -> Map.of("field", String.valueOf(r.getMethodParameter().getParameterName()),
+                                "message", String.valueOf(e.getDefaultMessage()))))
+                .toList());
+        return handleExceptionInternal(ex, pd, headers, status, request);
     }
 
     // Los errores que resuelve el propio framework (404, 405, JSON ilegible...) pasan por aquí:
