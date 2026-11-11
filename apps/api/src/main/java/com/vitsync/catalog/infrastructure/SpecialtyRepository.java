@@ -13,6 +13,8 @@ public interface SpecialtyRepository extends JpaRepository<Specialty, Long> {
 
     Optional<Specialty> findByCode(String code);
 
+    Optional<Specialty> findBySlugAndActiveTrue(String slug);
+
     /**
      * Especialidades activas filtradas en SQL, nunca en memoria.
      *

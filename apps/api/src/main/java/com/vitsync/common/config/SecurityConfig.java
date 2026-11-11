@@ -70,7 +70,8 @@ public class SecurityConfig {
                         // Catálogo público: se consulta antes de tener cuenta. Solo lectura;
                         // cualquier escritura (panel de administración) sigue cerrada.
                         .requestMatchers(HttpMethod.GET, "/api/v1/specialties", "/api/v1/specialties/**",
-                                "/api/v1/facilities", "/api/v1/facilities/**").permitAll()
+                                "/api/v1/facilities", "/api/v1/facilities/**",
+                                "/api/v1/doctors", "/api/v1/doctors/**").permitAll()
                         // Todo lo demás, con usuario autenticado.
                         .anyRequest().authenticated())
                 // Bearer JWT. El entry point propio sustituye al de Spring, que respondería un

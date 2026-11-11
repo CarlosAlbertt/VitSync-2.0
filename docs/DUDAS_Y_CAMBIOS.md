@@ -6,6 +6,40 @@
 
 ---
 
+## 2026-11-11 — Cuadro médico público (VIT-78)
+
+### Contexto
+
+Segunda aplicación de [ADR-0009](adr/0009-referencias-entre-modulos-por-id.md), y la más
+exigente: el listado mezcla datos de `iam` (nombre, colegiado, biografía) y de `catalog`
+(especialidad y centros), se filtra por las dos cosas y se pagina. Criterio de VIT-78: el
+filtrado ocurre en SQL, no en memoria.
+
+### Cambios realizados
+
+- **`GET /api/v1/doctors`**: público, paginado, por apellidos. Filtros `specialty` (slug) y
+  `facility` (`publicId`). Un filtro que no corresponde a nada devuelve una página vacía, no un
+  error. Solo datos públicos: nombre, colegiado, biografía, especialidad y centros activos.
+- **Cómo se reparte la consulta**: `catalog` resuelve sus filtros (slug → id, centro → ids de
+  sus médicos); `iam` devuelve la página ya filtrada y ordenada con su `count`
+  (`DoctorDirectory.listed`, con *Specifications* de Spring Data); `catalog` completa la página
+  con sus especialidades y centros, una consulta para cada cosa. Son siempre las mismas
+  consultas, tenga la página 2 médicos o 100.
+- **Quién sale en el cuadro médico**: perfil activo, con especialidad, y cuenta activa y no
+  borrada. Es el mismo criterio con el que se calcula `doctorCount` en las especialidades.
+- **`@EntityGraph`** en la consulta paginada: el usuario de cada médico viene en la misma
+  consulta. Sin él, leer los nombres haría una consulta por fila.
+
+### Verificación
+
+`DoctorsApiTest`: filtros por separado y combinados, orden, solo datos públicos, que filtrar va
+antes de paginar (el total es el de los filtrados), quién queda fuera, centros cerrados,
+filtros que no existen, validación y un test que **vigila el N+1**: una página de 2 médicos y
+otra de 6 tienen que hacer el mismo número de consultas (estadísticas de Hibernate, activadas
+solo en los tests). `CatalogDemoSeederTest` comprueba además el cuadro médico de demostración.
+
+---
+
 ## 2026-11-11 — Base de datos de demostración y frontend contra la API real (VIT-81)
 
 ### Contexto

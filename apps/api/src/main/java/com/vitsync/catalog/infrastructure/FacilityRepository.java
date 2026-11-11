@@ -1,7 +1,10 @@
 package com.vitsync.catalog.infrastructure;
 
 import com.vitsync.catalog.domain.Facility;
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -13,6 +16,36 @@ public interface FacilityRepository extends JpaRepository<Facility, Long> {
     Page<Facility> findByActiveTrue(Pageable pageable);
 
     Optional<Facility> findByName(String name);
+
+    Optional<Facility> findByPublicIdAndActiveTrue(UUID publicId);
+
+    /** Médicos asignados a un centro. El resto del filtro (visibles, especialidad) lo hace iam. */
+    @Query(value = "SELECT doctor_id FROM doctor_facilities WHERE facility_id = :facilityId", nativeQuery = true)
+    List<Long> findDoctorIds(Long facilityId);
+
+    /** Fila de "en qué centros activos pasa consulta cada médico". */
+    interface DoctorFacilityRow {
+        Long getDoctorId();
+
+        UUID getPublicId();
+
+        String getName();
+
+        String getCity();
+    }
+
+    /**
+     * Centros activos de todos los médicos de una página, en una sola consulta (ADR-0009).
+     * Alias entre comillas: sin ellas PostgreSQL los pasa a minúsculas y la proyección no los
+     * encuentra.
+     */
+    @Query(value = """
+            SELECT df.doctor_id AS "doctorId", f.public_id AS "publicId", f.name AS "name", f.city AS "city"
+            FROM doctor_facilities df JOIN facilities f ON f.id = df.facility_id
+            WHERE df.doctor_id IN (:doctorIds) AND f.active
+            ORDER BY f.city, f.name
+            """, nativeQuery = true)
+    List<DoctorFacilityRow> findActiveByDoctorIds(Collection<Long> doctorIds);
 
     /**
      * Asigna un médico a un centro ({@code doctor_facilities}, tabla de {@code catalog}).

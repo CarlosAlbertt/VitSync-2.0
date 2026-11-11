@@ -57,6 +57,15 @@ class CatalogDemoSeederTest extends IntegrationTest {
     }
 
     @Test
+    void the_demo_doctors_appear_in_the_public_directory() throws Exception {
+        mvc.perform(get("/api/v1/doctors").param("specialty", "cardiologia"))
+                .andExpect(jsonPath("$.content.length()").value(2))
+                .andExpect(jsonPath("$.content[0].lastName").value("Bellver Ros"))
+                .andExpect(jsonPath("$.content[0].facilities[0].name").value("Centro Jardín del Turia"))
+                .andExpect(jsonPath("$.content[1].lastName").value("Requena Sanz"));
+    }
+
+    @Test
     void seeding_twice_changes_nothing() {
         int specialties = jdbc.queryForObject("SELECT count(*) FROM specialties", Integer.class);
         int facilities = jdbc.queryForObject("SELECT count(*) FROM facilities", Integer.class);

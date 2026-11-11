@@ -3,10 +3,25 @@ package com.vitsync.iam.infrastructure;
 import com.vitsync.iam.domain.DoctorProfile;
 import java.util.Collection;
 import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 
-public interface DoctorProfileRepository extends JpaRepository<DoctorProfile, Long> {
+public interface DoctorProfileRepository extends JpaRepository<DoctorProfile, Long>,
+        JpaSpecificationExecutor<DoctorProfile> {
+
+    /**
+     * Página de médicos con su usuario ya cargado: el {@code @EntityGraph} hace que el usuario
+     * venga en la misma consulta. Sin él, leer el nombre de cada médico lanzaría una consulta
+     * por fila (N+1). El {@code count} de la paginación no lo usa.
+     */
+    @Override
+    @EntityGraph(attributePaths = "user")
+    Page<DoctorProfile> findAll(Specification<DoctorProfile> spec, Pageable pageable);
 
     List<DoctorProfile> findByLicenseNumberIn(Collection<String> licenseNumbers);
 
