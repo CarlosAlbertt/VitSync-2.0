@@ -1,4 +1,4 @@
-import { screen, within } from "@testing-library/react";
+import { fireEvent, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { useSession } from "@/shared/api/session";
@@ -21,9 +21,16 @@ const routes = [
 
 const sidebar = () => screen.getByRole("navigation", { name: "Tu área" });
 
-// ScrollRestoration llama a scrollTo, que jsdom no implementa.
+// jsdom no implementa scrollTo (lo usa ScrollRestoration) ni showModal/close de <dialog>.
 beforeAll(() => {
   window.scrollTo = vi.fn() as unknown as typeof window.scrollTo;
+  HTMLDialogElement.prototype.showModal = function (this: HTMLDialogElement) {
+    this.setAttribute("open", "");
+  };
+  HTMLDialogElement.prototype.close = function (this: HTMLDialogElement) {
+    this.removeAttribute("open");
+    this.dispatchEvent(new Event("close"));
+  };
 });
 beforeEach(() => useSession.setState({ status: "authenticated", accessToken: "token", user: demoUser }));
 afterEach(() => useTheme.getState().setPreference("system"));
@@ -90,5 +97,66 @@ describe("Navegación del área del paciente (VIT-111)", () => {
     renderRoutes(routes, "/panel");
 
     expect(within(sidebar().parentElement!).getByRole("link", { name: "900 000 000" })).toHaveAttribute("href", "tel:900000000");
+  });
+});
+
+describe("Barra inferior y hoja Más en móvil (VIT-112)", () => {
+  const bottomBar = () => within(screen.getByRole("navigation", { name: "Accesos rápidos" }));
+
+  it("tiene Inicio, Citas, Pedir cita, Mensajes y Más a un toque", () => {
+    renderRoutes(routes, "/panel/citas");
+    const bar = bottomBar();
+
+    expect(bar.getByRole("link", { name: "Inicio" })).toHaveAttribute("href", "/panel");
+    expect(bar.getByRole("link", { name: "Citas" })).toHaveAttribute("aria-current", "page");
+    expect(bar.getByRole("link", { name: "Pedir cita" })).toHaveAttribute("href", "/reservar");
+    expect(bar.getByRole("link", { name: /^Mensajes, \d+ sin leer$/ })).toHaveAttribute("href", "/panel/mensajes");
+    expect(bar.getByRole("button", { name: "Más" })).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("Más abre una hoja con el resto del portal y se cierra al navegar", async () => {
+    const user = userEvent.setup();
+    renderRoutes(routes, "/panel");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+
+    await user.click(bottomBar().getByRole("button", { name: "Más" }));
+
+    const sheet = within(screen.getByRole("dialog", { name: "Más opciones" }));
+    for (const name of ["Resultados e informes", "Medicación", "Historial clínico", "Seguimiento", "Documentos", "Pagos y seguro", "Familia", "Mis datos"]) {
+      expect(sheet.getByRole("link", { name })).toBeInTheDocument();
+    }
+    expect(sheet.getByRole("link", { name: "Llamar al 900 000 000" })).toHaveAttribute("href", "tel:900000000");
+    expect(bottomBar().getByRole("button", { name: "Más" })).toHaveAttribute("aria-expanded", "true");
+
+    await user.click(sheet.getByRole("link", { name: "Familia" }));
+
+    expect(await screen.findByRole("heading", { name: "Pantalla familia" })).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(bottomBar().getByRole("button", { name: "Más" })).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("la hoja se cierra con su botón y la apariencia se cambia desde ella", async () => {
+    const user = userEvent.setup();
+    renderRoutes(routes, "/panel");
+    await user.click(bottomBar().getByRole("button", { name: "Más" }));
+    const sheet = within(screen.getByRole("dialog", { name: "Más opciones" }));
+
+    await user.click(within(sheet.getByRole("group", { name: "Apariencia" })).getByRole("button", { name: "Oscuro" }));
+    expect(document.documentElement.dataset.theme).toBe("dark");
+
+    await user.click(sheet.getByRole("button", { name: "Cerrar" }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("Escape cierra la hoja aunque el navegador no emita close", async () => {
+    // Chrome, al pulsar Escape, dispara "cancel" y no siempre "close": el estado debe cerrarse igual.
+    const user = userEvent.setup();
+    renderRoutes(routes, "/panel");
+    await user.click(bottomBar().getByRole("button", { name: "Más" }));
+
+    fireEvent(screen.getByRole("dialog", { name: "Más opciones" }), new Event("cancel", { cancelable: true }));
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(bottomBar().getByRole("button", { name: "Más" })).toHaveAttribute("aria-expanded", "false");
   });
 });

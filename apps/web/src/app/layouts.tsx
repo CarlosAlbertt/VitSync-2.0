@@ -1,9 +1,13 @@
 import { useQueryClient } from "@tanstack/react-query";
 import {
+  Activity,
   Bell,
   CalendarDays,
   ChevronDown,
+  ClipboardList,
   CreditCard,
+  Ellipsis,
+  FlaskConical,
   FolderOpen,
   HeartPulse,
   LayoutDashboard,
@@ -14,6 +18,7 @@ import {
   Monitor,
   Moon,
   Phone,
+  Pill,
   Plus,
   Search,
   ShieldCheck,
@@ -286,20 +291,19 @@ const unreadNotices = notices.filter((n) => !n.read);
 
 // Siete destinos de primer nivel (VIT-111). La cuenta vive en el menú de usuario y los avisos
 // en la campana: cada función tiene un solo sitio. Ninguna URL desaparece, solo cambia dónde se enlaza.
-const PRIMARY: NavItem[] = [
-  { to: "/panel", label: "Inicio", icon: LayoutDashboard, end: true },
-  { to: "/panel/citas", label: "Citas", icon: CalendarDays, also: ["/panel/videoconsulta"] },
-  { to: "/panel/mensajes", label: "Mensajes", icon: MessageSquare, badge: unreadMessages },
-];
+const HOME: NavItem = { to: "/panel", label: "Inicio", icon: LayoutDashboard, end: true };
+const APPOINTMENTS: NavItem = { to: "/panel/citas", label: "Citas", icon: CalendarDays, also: ["/panel/videoconsulta"] };
+const MESSAGES: NavItem = { to: "/panel/mensajes", label: "Mensajes", icon: MessageSquare, badge: unreadMessages };
+const PRIMARY = [HOME, APPOINTMENTS, MESSAGES];
 
-const HEALTH: { label: string; icon: LucideIcon; items: { to: string; label: string }[] } = {
+const HEALTH: { label: string; icon: LucideIcon; items: { to: string; label: string; icon: LucideIcon }[] } = {
   label: "Mi salud",
   icon: HeartPulse,
   items: [
-    { to: "/panel/informes", label: "Resultados e informes" },
-    { to: "/panel/medicacion", label: "Medicación" },
-    { to: "/panel/historial", label: "Historial clínico" },
-    { to: "/panel/seguimiento", label: "Seguimiento" },
+    { to: "/panel/informes", label: "Resultados e informes", icon: FlaskConical },
+    { to: "/panel/medicacion", label: "Medicación", icon: Pill },
+    { to: "/panel/historial", label: "Historial clínico", icon: ClipboardList },
+    { to: "/panel/seguimiento", label: "Seguimiento", icon: Activity },
   ],
 };
 
@@ -569,12 +573,183 @@ function SearchBox() {
   );
 }
 
+// ─── Móvil: barra inferior y hoja "Más" (VIT-112) ───────────────────────────
+
+// Cuatro destinos a un toque en la zona cómoda del pulgar, y "Pedir cita" en el centro.
+const BOTTOM = [HOME, APPOINTMENTS];
+const BOTTOM_END = [MESSAGES];
+
+// Todo lo que no está en la barra inferior. "Más" se marca activo cuando se está en una de estas pantallas.
+const MORE_ROUTES = [...HEALTH.items.map((item) => item.to), ...SECONDARY.map((item) => item.to), ...ACCOUNT_LINKS.map((item) => item.to)];
+
+function BottomTab({ item }: { item: NavItem }) {
+  const { pathname } = useLocation();
+  const active = isActive(pathname, item);
+  const { to, label, icon: Icon, badge } = item;
+  return (
+    <li>
+      <Link to={to} aria-current={active ? "page" : undefined} className={`flex h-14 flex-col items-center justify-center gap-0.5 text-[11px] font-semibold ${active ? "text-accent-strong" : "text-ink-soft"}`}>
+        <span className="relative">
+          <Icon className="size-5.5" aria-hidden />
+          {badge ? (
+            <span aria-hidden className="absolute -top-1.5 -right-2.5 grid min-w-4.5 place-items-center rounded-full bg-danger px-1 text-[10px] font-bold text-canvas">
+              {badge}
+            </span>
+          ) : null}
+        </span>
+        {label}
+        {badge ? <span className="sr-only">, {badge} sin leer</span> : null}
+      </Link>
+    </li>
+  );
+}
+
+function BottomNav({ moreOpen, onMore }: { moreOpen: boolean; onMore: () => void }) {
+  const { pathname } = useLocation();
+  const inMore = MORE_ROUTES.some((route) => within(pathname, route));
+  return (
+    <nav aria-label="Accesos rápidos" className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-raised pb-[env(safe-area-inset-bottom)] lg:hidden">
+      <ul className="mx-auto grid max-w-lg grid-cols-5 items-end px-1">
+        {BOTTOM.map((item) => (
+          <BottomTab key={item.to} item={item} />
+        ))}
+        <li className="flex justify-center">
+          <Link to="/reservar" className="flex h-14 flex-col items-center justify-center gap-0.5 text-[11px] font-semibold text-ink">
+            <span className="-mt-5 grid size-12 place-items-center rounded-2xl bg-accent text-accent-ink shadow-md ring-4 ring-raised">
+              <Plus className="size-6" aria-hidden />
+            </span>
+            Pedir cita
+          </Link>
+        </li>
+        {BOTTOM_END.map((item) => (
+          <BottomTab key={item.to} item={item} />
+        ))}
+        <li>
+          <button
+            type="button"
+            aria-haspopup="dialog"
+            aria-expanded={moreOpen}
+            onClick={onMore}
+            className={`flex h-14 w-full cursor-pointer flex-col items-center justify-center gap-0.5 text-[11px] font-semibold ${inMore ? "text-accent-strong" : "text-ink-soft"}`}
+          >
+            <Ellipsis className="size-5.5" aria-hidden />
+            Más
+          </button>
+        </li>
+      </ul>
+    </nav>
+  );
+}
+
+function SheetTile({ to, label, icon: Icon }: { to: string; label: string; icon: LucideIcon }) {
+  const { pathname } = useLocation();
+  const active = within(pathname, to);
+  return (
+    <li>
+      <Link
+        to={to}
+        aria-current={active ? "page" : undefined}
+        className={`flex min-h-13 items-center gap-3 rounded-xl border px-3.5 text-sm font-semibold transition-colors ${active ? "border-accent bg-accent-wash text-accent-strong" : "border-line hover:bg-subtle"}`}
+      >
+        <Icon className="size-4.5 shrink-0" aria-hidden />
+        <span className="min-w-0 leading-tight">{label}</span>
+      </Link>
+    </li>
+  );
+}
+
+const MANAGEMENT = [...SECONDARY, { to: "/panel/perfil", label: "Mis datos", icon: UserRound }];
+
+/**
+ * Hoja inferior con el resto del portal. <dialog> nativo, como ConfirmDialog: foco atrapado,
+ * Escape y fondo inerte. Se cierra también al pulsar fuera y al navegar.
+ */
+function MoreSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const ref = useRef<HTMLDialogElement>(null);
+  const logout = useLogout();
+
+  useEffect(() => {
+    const dialog = ref.current;
+    if (!dialog) return;
+    if (open && !dialog.open) dialog.showModal();
+    if (!open && dialog.open) dialog.close();
+  }, [open]);
+
+  return (
+    <dialog
+      ref={ref}
+      // Escape: Chrome dispara "cancel" pero no siempre "close", y el estado se quedaba abierto.
+      // Se cancela el cierre nativo y se cierra desde el estado, que es el que manda.
+      onCancel={(event) => {
+        event.preventDefault();
+        onClose();
+      }}
+      onClose={onClose}
+      // El clic que cae en el propio <dialog> y no en su contenido es el fondo.
+      onClick={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+      aria-labelledby="more-title"
+      className="m-0 mt-auto max-h-[85dvh] w-full max-w-none overflow-y-auto rounded-t-2xl bg-raised p-0 text-ink"
+    >
+      <div className="px-5 pt-3 pb-[calc(1.25rem+env(safe-area-inset-bottom))]">
+        <div aria-hidden className="mx-auto mb-3 h-1 w-10 rounded-full bg-line" />
+        <div className="flex items-center justify-between">
+          <h2 id="more-title" className="text-lg font-bold">
+            Más opciones
+          </h2>
+          <button type="button" aria-label="Cerrar" onClick={onClose} className="grid size-11 cursor-pointer place-items-center rounded-xl text-ink-soft hover:bg-subtle hover:text-ink">
+            <X className="size-5" aria-hidden />
+          </button>
+        </div>
+
+        <h3 className="mt-3 mb-2 text-xs font-bold text-ink-soft">{HEALTH.label}</h3>
+        <ul className="grid grid-cols-2 gap-2">
+          {HEALTH.items.map((item) => (
+            <SheetTile key={item.to} {...item} />
+          ))}
+        </ul>
+
+        <h3 className="mt-5 mb-2 text-xs font-bold text-ink-soft">Gestión</h3>
+        <ul className="grid grid-cols-2 gap-2">
+          {MANAGEMENT.map((item) => (
+            <SheetTile key={item.to} {...item} />
+          ))}
+        </ul>
+
+        <h3 className="mt-5 mb-2 text-xs font-bold text-ink-soft">Apariencia</h3>
+        <ThemeChoice />
+
+        <h3 className="mt-5 mb-2 text-xs font-bold text-ink-soft">¿Necesitas ayuda?</h3>
+        <div className="grid grid-cols-[1fr_auto] gap-2">
+          <a href={CONTACT.phoneHref} className="flex h-12 items-center justify-center gap-2 rounded-xl bg-accent px-4 text-sm font-bold text-accent-ink">
+            <Phone className="size-4" aria-hidden />
+            Llamar al {CONTACT.phone}
+          </a>
+          <Link to="/panel/mensajes" className="flex h-12 items-center rounded-xl border border-line px-4 text-sm font-bold hover:bg-subtle">
+            Escribir
+          </Link>
+        </div>
+
+        <div className="mt-5 flex items-center justify-between border-t border-line pt-3 text-sm font-semibold">
+          <Link to="/panel/seguridad" className="py-2 hover:underline">
+            Seguridad y privacidad
+          </Link>
+          <button type="button" onClick={logout} className="cursor-pointer py-2 text-ink-soft hover:text-ink hover:underline">
+            Cerrar sesión
+          </button>
+        </div>
+      </div>
+    </dialog>
+  );
+}
+
 export function AppLayout() {
   const main = useRouteFocus();
   const { pathname } = useLocation();
-  const [drawer, setDrawer] = useState(false);
+  const [more, setMore] = useState(false);
 
-  useEffect(() => setDrawer(false), [pathname]);
+  useEffect(() => setMore(false), [pathname]);
 
   return (
     <div className="min-h-dvh">
@@ -583,27 +758,15 @@ export function AppLayout() {
         <Sidebar />
       </aside>
 
-      {drawer && (
-        <div className="fixed inset-0 z-40 lg:hidden">
-          <button type="button" aria-label="Cerrar menú" onClick={() => setDrawer(false)} className="absolute inset-0 cursor-default bg-black/40" />
-          <aside className="absolute inset-y-0 left-0 w-72 max-w-[85vw] bg-raised">
-            <Sidebar />
-          </aside>
-        </div>
-      )}
-
       <div className="lg:pl-68">
         <header className="sticky top-0 z-20 flex h-16 items-center gap-2 border-b border-line bg-raised px-4 lg:px-8">
-          <button type="button" aria-label="Abrir menú" onClick={() => setDrawer(true)} className="grid size-10 cursor-pointer place-items-center rounded-xl hover:bg-subtle lg:hidden">
-            <Menu className="size-5" aria-hidden />
-          </button>
           <Link to="/panel" aria-label="VitSync, tu área" className="lg:hidden">
             <Logo />
           </Link>
           <SearchBox />
-          {/* "Pedir cita" es la única acción primaria de la cabecera; el tema está en el menú de usuario. */}
+          {/* "Pedir cita" es la única acción primaria de la cabecera; en móvil está en la barra inferior. */}
           <div className="ml-auto flex items-center gap-1">
-            <span className="mr-1 hidden sm:block">
+            <span className="mr-1 hidden lg:block">
               <ButtonLink to="/reservar" size="sm">
                 <Plus className="size-4" aria-hidden />
                 Pedir cita
@@ -613,10 +776,14 @@ export function AppLayout() {
             <UserMenu />
           </div>
         </header>
-        <main id="contenido" ref={main} tabIndex={-1} className="mx-auto max-w-7xl px-4 py-6 outline-none lg:px-8 lg:py-8">
+        {/* En móvil, el contenido deja hueco para la barra inferior y la zona segura del sistema. */}
+        <main id="contenido" ref={main} tabIndex={-1} className="mx-auto max-w-7xl px-4 pt-6 pb-[calc(6rem+env(safe-area-inset-bottom))] outline-none lg:px-8 lg:py-8">
           <Outlet />
         </main>
       </div>
+
+      <BottomNav moreOpen={more} onMore={() => setMore(true)} />
+      <MoreSheet open={more} onClose={() => setMore(false)} />
       <ScrollRestoration />
     </div>
   );
