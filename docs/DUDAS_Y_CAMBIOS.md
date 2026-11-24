@@ -6,6 +6,47 @@
 
 ---
 
+## 2026-11-24 — Navegación del área del paciente en 7 destinos (VIT-111)
+
+### Contexto
+
+La revisión de UI/UX (Frontend Developer, UI Designer y UX Architect) encontró que la barra
+lateral tenía 14 entradas en 4 grupos y repetía funciones: la cuenta aparecía en la barra y en
+el menú de usuario, las notificaciones en la barra y en la campana, y la videoconsulta competía
+con Citas. Entre las dos propuestas (7 destinos o mantener los 4 grupos) se eligió la de
+**7 destinos**. Es la primera de tres historias de navegación, colgadas de la épica VIT-16:
+VIT-111 (barra lateral), VIT-112 (barra inferior en móvil) y VIT-113 (buscador con Ctrl K).
+
+### Cambios realizados
+
+- **Primer nivel**: Inicio, Citas, Mensajes, Mi salud, Documentos, Pagos y seguro y Familia.
+  **Mi salud** es un desplegable con Resultados e informes, Medicación, Historial clínico y
+  Seguimiento: se abre solo al entrar en cualquiera de ellas y expone `aria-expanded`.
+- **La sala de videoconsulta cuenta como Citas**: sale de la barra, se entra desde la propia
+  cita ("Ir a la sala") y la barra marca Citas cuando se está en `/panel/videoconsulta`.
+- **La cuenta, solo en el menú de usuario**: Mis datos, Seguridad y privacidad y Preferencias de
+  avisos. La campana sigue enlazando a "Ver todas".
+- **Tema claro, oscuro o sistema** en el menú de usuario. "Sistema" no guarda nada y sigue al
+  sistema operativo en vivo. El botón de la web pública sigue igual. Con esto, "Pedir cita" es
+  la única acción primaria de la cabecera.
+- **La ayuda telefónica se puede pulsar** (`tel:`).
+- **No se borra ninguna URL**: solo cambia desde dónde se enlaza cada pantalla. La entrada activa
+  lleva `aria-current="page"`.
+
+### Fuera de esta historia
+
+- El cajón con hamburguesa en móvil se queda hasta VIT-112, que lo sustituye por la barra inferior.
+- El buscador de la cabecera sigue siendo de demostración hasta VIT-113.
+- El selector de paciente para familiares sigue en el menú de usuario: es la decisión 4 de la
+  revisión y todavía está abierta.
+
+### Verificación
+
+`layouts.test.tsx` (6 tests): los 7 destinos y que la cuenta no está en la barra, Mi salud
+cerrado y abierto al pulsar, abierto al entrar directamente en una de sus pantallas, la sala de
+videoconsulta como Citas, el menú de usuario con la apariencia aplicada al documento y el enlace
+`tel:`. Comprobado a mano en el navegador en claro y oscuro con `pnpm dev:mocks`.
+
 ## 2026-11-24 — La CI no podía descargar Maven (VIT-114)
 
 El job `api (build + tests)` del PR #19 fallaba a los 14 segundos con
@@ -65,6 +106,7 @@ contra `vitsync_dev`: cuadro médico filtrado por especialidad y por centro con 
 reserva simulada con un médico real (201).
 
 ---
+
 
 ## 2026-11-11 — Cuadro médico público (VIT-78)
 
