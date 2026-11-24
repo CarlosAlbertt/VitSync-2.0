@@ -25,6 +25,12 @@ export function ConfirmDialog({ open, title, children, confirmLabel, busy, onCon
   return (
     <dialog
       ref={ref}
+      // Escape: Chrome dispara "cancel" pero no siempre "close", y el estado se quedaba abierto.
+      // Se cancela el cierre nativo y se cierra desde el estado, que es el que manda.
+      onCancel={(event) => {
+        event.preventDefault();
+        onClose();
+      }}
       onClose={onClose}
       aria-labelledby="confirm-title"
       className="card m-auto w-[min(28rem,calc(100vw-2rem))] rounded-xl p-7 text-ink"

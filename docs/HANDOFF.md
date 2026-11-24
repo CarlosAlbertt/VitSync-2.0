@@ -156,8 +156,8 @@ ver la entrada "Plan del Sprint 1" en [DUDAS_Y_CAMBIOS](DUDAS_Y_CAMBIOS.md).
    pantalla simulada por su endpoint según exista.
 
    **Navegación del portal** (revisión UI/UX, épica VIT-16): barra lateral de 7 destinos
-   (VIT-111) en PR; después, la barra inferior en móvil (VIT-112) y el buscador con Ctrl K
-   (VIT-113). A continuación, reservar sin cuenta hasta confirmar, que toca backend.
+   (VIT-111) mergeada (#20); barra inferior en móvil (VIT-112) en PR; después, el buscador con
+   Ctrl K (VIT-113). A continuación, reservar sin cuenta hasta confirmar, que toca backend.
 
    Pendientes técnicos anotados en DUDAS_Y_CAMBIOS: rate limiting por IP (Bucket4j), limpieza
    de `refresh_tokens` caducados, readiness tras el seeder demo y un endpoint para los datos

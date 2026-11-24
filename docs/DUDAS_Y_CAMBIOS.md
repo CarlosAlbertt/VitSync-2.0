@@ -6,6 +6,43 @@
 
 ---
 
+## 2026-11-24 — Barra inferior y hoja "Más" en móvil (VIT-112)
+
+### Contexto
+
+Segunda historia de navegación de la épica VIT-16. Por debajo de 1024 px todo el portal estaba
+detrás de una hamburguesa arriba a la izquierda, la zona más difícil de alcanzar con el pulgar.
+Además, "Pedir cita" desaparecía por debajo de 640 px.
+
+### Cambios realizados
+
+- **Barra inferior fija** por debajo de `lg` con Inicio, Citas, **Pedir cita** (en el centro,
+  destacado), Mensajes y Más. Botones de 56 px de alto y avisos de no leídos con texto para
+  lectores ("Mensajes, 2 sin leer"). Respeta la zona segura del sistema (`viewport-fit=cover` y
+  `env(safe-area-inset-bottom)`), y el contenido deja hueco para que no quede tapado.
+- **Hoja "Más"**: Mi salud y Gestión en mosaico de dos columnas (Mis datos incluido),
+  apariencia, ayuda con llamada directa y "Escribir", Seguridad y privacidad y Cerrar sesión. Es
+  un `<dialog>` modal como `ConfirmDialog`: foco atrapado y fondo inerte. Se cierra con Escape, con
+  el botón Cerrar, al pulsar fuera y al navegar. "Más" se marca como activo cuando se está en
+  una de sus pantallas.
+- **Fuera la hamburguesa y el cajón lateral.** En la cabecera móvil quedan el logo, la campana y
+  el menú de usuario. "Pedir cita" sale de la cabecera por debajo de `lg` porque ya está en la barra.
+
+### Fallo encontrado y corregido: Escape no cerraba bien los diálogos
+
+Al probarlo en Chrome, Escape cerraba la hoja, pero el estado de React seguía en "abierta". Chrome
+emitía `cancel` y no siempre `close`, que era el único evento que se escuchaba. El siguiente toque
+en "Más" no hacía nada. Ahora `cancel` se intercepta (`preventDefault`) y el cierre va siempre por
+el estado. **`ConfirmDialog` tenía el mismo patrón** (cancelar cita, cerrar sesiones) y lleva el
+mismo arreglo.
+
+### Verificación
+
+`layouts.test.tsx` suma 4 tests: los cinco accesos de la barra, que "Más" abre la hoja con todas
+las pantallas y se cierra al navegar, el cierre con su botón y el cambio de apariencia desde ella,
+y la regresión de Escape (un `cancel` sin `close`). Probado a mano a 390, 820 y 1440 px: en
+escritorio la barra no se pinta.
+
 ## 2026-11-24 — Navegación del área del paciente en 7 destinos (VIT-111)
 
 ### Contexto
