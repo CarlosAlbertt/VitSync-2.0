@@ -6,6 +6,20 @@
 
 ---
 
+## 2026-11-24 — La CI no podía descargar Maven (VIT-114)
+
+El job `api (build + tests)` del PR #19 fallaba a los 14 segundos con
+`wget: Failed to fetch .../apache-maven-3.9.16-bin.zip`: el wrapper no llegaba a bajar Maven de
+Maven Central. El código no tenía nada que ver: `./mvnw -B verify` con esa rama en un contenedor
+Linux con Java 21 compila y ejecuta los tests.
+
+- **Causa**: `setup-java` con `cache: maven` solo cachea `~/.m2/repository`, así que el wrapper
+  descargaba la distribución en `~/.m2/wrapper` en cada ejecución. Basta con que Maven Central no
+  responda al runner una vez (límite de peticiones a las IPs compartidas) para que la CI falle.
+- **Arreglo** en `ci.yml`: caché de `~/.m2/wrapper` con la clave del hash de
+  `maven-wrapper.properties` (si cambia la versión de Maven, se baja la nueva) y un paso que
+  descarga Maven con hasta tres intentos antes del `verify`.
+
 ## 2026-11-11 — Pantallas del catálogo contra la API real y tipos generados (VIT-80, VIT-70)
 
 ### Cambios realizados
