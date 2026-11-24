@@ -148,12 +148,17 @@ ver la entrada "Plan del Sprint 1" en [DUDAS_Y_CAMBIOS](DUDAS_Y_CAMBIOS.md).
    **Sprint 2 en curso**: especialidades, centros y datos de demostración (VIT-76, VIT-77 y
    VIT-81) mergeados (#16), con la base de demostración `vitsync_dev` (perfil `demo`) y
    `pnpm dev` contra la API real. Cuadro médico (VIT-78) mergeado (#17). Pantallas del
-   catálogo contra la API real con tipos generados del contrato (VIT-80 y VIT-70) en PR.
-   Después, las enfermedades (VIT-79).
+   catálogo contra la API real con tipos generados del contrato (VIT-80 y VIT-70) mergeadas
+   (#19), junto con la caché de Maven en la CI (VIT-114). Después, las enfermedades (VIT-79).
 
    **Siguiente**: el resto del Sprint 2 (catálogo y citas), con las referencias entre módulos según
    [ADR-0009](adr/0009-referencias-entre-modulos-por-id.md), sustituyendo en el frontend cada
    pantalla simulada por su endpoint según exista.
+
+   **Navegación del portal** (revisión UI/UX, épica VIT-16): barra lateral de 7 destinos
+   (VIT-111) en PR; después, la barra inferior en móvil (VIT-112) y el buscador con Ctrl K
+   (VIT-113). A continuación, reservar sin cuenta hasta confirmar, que toca backend.
+
    Pendientes técnicos anotados en DUDAS_Y_CAMBIOS: rate limiting por IP (Bucket4j), limpieza
    de `refresh_tokens` caducados, readiness tras el seeder demo y un endpoint para los datos
    clínicos del paciente.

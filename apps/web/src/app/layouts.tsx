@@ -1,25 +1,25 @@
 import { useQueryClient } from "@tanstack/react-query";
 import {
-  Activity,
   Bell,
   CalendarDays,
   ChevronDown,
-  ClipboardList,
   CreditCard,
-  FlaskConical,
   FolderOpen,
+  HeartPulse,
   LayoutDashboard,
   LogOut,
   type LucideIcon,
   Menu,
   MessageSquare,
-  Pill,
+  Monitor,
+  Moon,
+  Phone,
   Plus,
   Search,
   ShieldCheck,
+  Sun,
   UserRound,
   Users,
-  Video,
   X,
 } from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent } from "react";
@@ -35,6 +35,7 @@ import { Avatar } from "@/shared/ui/avatar";
 import { ButtonLink } from "@/shared/ui/button";
 import { Loading } from "@/shared/ui/feedback";
 import { Logo } from "@/shared/ui/logo";
+import { type ThemePreference, useTheme } from "@/shared/lib/theme";
 import { ThemeToggle } from "@/shared/ui/theme-toggle";
 
 const NAV = [
@@ -266,49 +267,120 @@ export function RequireAuth() {
   return <Outlet />;
 }
 
+
 // ─── Área del paciente ──────────────────────────────────────────────────────
 
-type NavItem = { to: string; label: string; icon: LucideIcon; end?: boolean; badge?: number };
+type NavItem = {
+  to: string;
+  label: string;
+  icon: LucideIcon;
+  /** Solo activo en la ruta exacta (Inicio). */
+  end?: boolean;
+  /** Otras rutas que cuentan como este destino (la sala de videoconsulta es parte de Citas). */
+  also?: string[];
+  badge?: number;
+};
 
 const unreadMessages = conversations.reduce((total, c) => total + c.unread, 0);
 const unreadNotices = notices.filter((n) => !n.read);
 
-const GROUPS: { label: string; items: NavItem[] }[] = [
-  {
-    label: "Principal",
-    items: [
-      { to: "/panel", label: "Inicio", icon: LayoutDashboard, end: true },
-      { to: "/panel/citas", label: "Citas", icon: CalendarDays },
-      { to: "/panel/videoconsulta", label: "Videoconsulta", icon: Video },
-      { to: "/panel/mensajes", label: "Mensajes", icon: MessageSquare, badge: unreadMessages },
-    ],
-  },
-  {
-    label: "Mi salud",
-    items: [
-      { to: "/panel/informes", label: "Resultados e informes", icon: FlaskConical },
-      { to: "/panel/medicacion", label: "Medicación", icon: Pill },
-      { to: "/panel/historial", label: "Historial clínico", icon: ClipboardList },
-      { to: "/panel/seguimiento", label: "Seguimiento", icon: Activity },
-    ],
-  },
-  {
-    label: "Gestión",
-    items: [
-      { to: "/panel/documentos", label: "Documentos", icon: FolderOpen },
-      { to: "/panel/familia", label: "Familia", icon: Users },
-      { to: "/panel/pagos", label: "Pagos y seguro", icon: CreditCard },
-    ],
-  },
-  {
-    label: "Cuenta",
-    items: [
-      { to: "/panel/perfil", label: "Mis datos", icon: UserRound },
-      { to: "/panel/seguridad", label: "Seguridad y privacidad", icon: ShieldCheck },
-      { to: "/panel/notificaciones", label: "Notificaciones", icon: Bell, badge: unreadNotices.length },
-    ],
-  },
+// Siete destinos de primer nivel (VIT-111). La cuenta vive en el menú de usuario y los avisos
+// en la campana: cada función tiene un solo sitio. Ninguna URL desaparece, solo cambia dónde se enlaza.
+const PRIMARY: NavItem[] = [
+  { to: "/panel", label: "Inicio", icon: LayoutDashboard, end: true },
+  { to: "/panel/citas", label: "Citas", icon: CalendarDays, also: ["/panel/videoconsulta"] },
+  { to: "/panel/mensajes", label: "Mensajes", icon: MessageSquare, badge: unreadMessages },
 ];
+
+const HEALTH: { label: string; icon: LucideIcon; items: { to: string; label: string }[] } = {
+  label: "Mi salud",
+  icon: HeartPulse,
+  items: [
+    { to: "/panel/informes", label: "Resultados e informes" },
+    { to: "/panel/medicacion", label: "Medicación" },
+    { to: "/panel/historial", label: "Historial clínico" },
+    { to: "/panel/seguimiento", label: "Seguimiento" },
+  ],
+};
+
+const SECONDARY: NavItem[] = [
+  { to: "/panel/documentos", label: "Documentos", icon: FolderOpen },
+  { to: "/panel/pagos", label: "Pagos y seguro", icon: CreditCard },
+  { to: "/panel/familia", label: "Familia", icon: Users },
+];
+
+const within = (pathname: string, to: string) => pathname === to || pathname.startsWith(`${to}/`);
+
+function isActive(pathname: string, { to, end, also = [] }: NavItem) {
+  if (end) return pathname === to;
+  return [to, ...also].some((route) => within(pathname, route));
+}
+
+const rowClass = (active: boolean) =>
+  `flex h-10 items-center gap-3 rounded-xl px-3 text-[0.95rem] font-semibold transition-colors ${active ? "bg-accent text-accent-ink" : "text-ink-soft hover:bg-subtle hover:text-ink"}`;
+
+function NavRow({ item }: { item: NavItem }) {
+  const { pathname } = useLocation();
+  const active = isActive(pathname, item);
+  const { to, label, icon: Icon, badge } = item;
+  return (
+    <li>
+      <Link to={to} aria-current={active ? "page" : undefined} className={rowClass(active)}>
+        <Icon className="size-4.5 shrink-0" aria-hidden />
+        <span className="flex-1 truncate">{label}</span>
+        {badge ? (
+          <span className="grid min-w-5 place-items-center rounded-full bg-accent-wash px-1.5 text-xs font-bold text-accent-strong">
+            {badge}
+            <span className="sr-only"> sin leer</span>
+          </span>
+        ) : null}
+      </Link>
+    </li>
+  );
+}
+
+/** "Mi salud" agrupa cuatro pantallas: se abre sola al entrar en cualquiera de ellas. */
+function HealthGroup() {
+  const { pathname } = useLocation();
+  const inside = HEALTH.items.some((item) => within(pathname, item.to));
+  const [open, setOpen] = useState(inside);
+  useEffect(() => {
+    if (inside) setOpen(true);
+  }, [inside]);
+
+  const Icon = HEALTH.icon;
+  return (
+    <li>
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-controls="nav-mi-salud"
+        onClick={() => setOpen(!open)}
+        className={`flex h-10 w-full cursor-pointer items-center gap-3 rounded-xl px-3 text-left text-[0.95rem] font-semibold transition-colors hover:bg-subtle hover:text-ink ${inside && !open ? "text-ink" : "text-ink-soft"}`}
+      >
+        <Icon className="size-4.5 shrink-0" aria-hidden />
+        <span className="flex-1">{HEALTH.label}</span>
+        <ChevronDown className={`size-4 shrink-0 transition-transform ${open ? "rotate-180" : ""}`} aria-hidden />
+      </button>
+      <ul id="nav-mi-salud" hidden={!open} className="mt-0.5 ml-5 grid gap-0.5 border-l border-line pl-2">
+        {HEALTH.items.map(({ to, label }) => {
+          const active = within(pathname, to);
+          return (
+            <li key={to}>
+              <Link
+                to={to}
+                aria-current={active ? "page" : undefined}
+                className={`flex h-9 items-center rounded-lg px-3 text-sm font-semibold transition-colors ${active ? "bg-accent text-accent-ink" : "text-ink-soft hover:bg-subtle hover:text-ink"}`}
+              >
+                {label}
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+    </li>
+  );
+}
 
 function Sidebar() {
   return (
@@ -317,39 +389,24 @@ function Sidebar() {
         <Logo />
       </Link>
       <nav aria-label="Tu área" className="flex-1 overflow-y-auto px-3 py-4">
-        <div className="grid gap-4">
-          {GROUPS.map((group) => (
-            <div key={group.label}>
-              <p className="mb-1 px-3 text-xs font-bold text-ink-soft">{group.label}</p>
-              <ul className="grid gap-0.5">
-                {group.items.map(({ to, label, icon: Icon, end, badge }) => (
-                  <li key={to}>
-                    <NavLink
-                      to={to}
-                      end={end}
-                      className={({ isActive }) =>
-                        `flex h-9 items-center gap-3 rounded-xl px-3 text-[0.95rem] font-semibold transition-colors ${isActive ? "bg-accent text-accent-ink" : "text-ink-soft hover:bg-subtle hover:text-ink"}`
-                      }
-                    >
-                      <Icon className="size-4.5 shrink-0" aria-hidden />
-                      <span className="flex-1 truncate">{label}</span>
-                      {badge ? (
-                        <span className="grid min-w-5 place-items-center rounded-full bg-accent-wash px-1.5 text-xs font-bold text-accent-strong">
-                          {badge}
-                          <span className="sr-only"> sin leer</span>
-                        </span>
-                      ) : null}
-                    </NavLink>
-                  </li>
-                ))}
-              </ul>
-            </div>
+        <ul className="grid gap-0.5">
+          {PRIMARY.map((item) => (
+            <NavRow key={item.to} item={item} />
           ))}
-        </div>
+          <HealthGroup />
+          {SECONDARY.map((item) => (
+            <NavRow key={item.to} item={item} />
+          ))}
+        </ul>
       </nav>
-      <div className="m-3 rounded-2xl bg-subtle px-4 py-3 text-sm">
-        <p className="font-bold">¿Necesitas ayuda? {CONTACT.phone}</p>
-        <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 font-semibold">
+      <div className="m-3 rounded-xl border border-line px-4 py-3 text-sm">
+        <p className="text-xs font-bold text-ink-soft">Atención al paciente</p>
+        <a href={CONTACT.phoneHref} className="mt-1 flex items-center gap-2 font-bold hover:underline">
+          <Phone className="size-4 text-ink-soft" aria-hidden />
+          {CONTACT.phone}
+        </a>
+        <p className="mt-0.5 text-xs text-ink-soft">De lunes a viernes, de 8:00 a 20:00</p>
+        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 font-semibold">
           <Link to="/contacto" className="hover:underline">
             Contacto
           </Link>
@@ -404,6 +461,38 @@ function NotificationsMenu() {
 
 const ROLE_LABEL: Record<Role, string> = { PATIENT: "Paciente", DOCTOR: "Profesional", ADMIN: "Administración" };
 
+const ACCOUNT_LINKS: { to: string; label: string; icon: LucideIcon }[] = [
+  { to: "/panel/perfil", label: "Mis datos", icon: UserRound },
+  { to: "/panel/seguridad", label: "Seguridad y privacidad", icon: ShieldCheck },
+  { to: "/panel/notificaciones", label: "Preferencias de avisos", icon: Bell },
+];
+
+const THEMES: { value: ThemePreference; label: string; icon: LucideIcon }[] = [
+  { value: "light", label: "Claro", icon: Sun },
+  { value: "dark", label: "Oscuro", icon: Moon },
+  { value: "system", label: "Sistema", icon: Monitor },
+];
+
+function ThemeChoice() {
+  const { preference, setPreference } = useTheme();
+  return (
+    <div role="group" aria-label="Apariencia" className="grid grid-cols-3 gap-1 rounded-xl bg-subtle p-1">
+      {THEMES.map(({ value, label, icon: Icon }) => (
+        <button
+          key={value}
+          type="button"
+          aria-pressed={preference === value}
+          onClick={() => setPreference(value)}
+          className={`flex h-9 cursor-pointer items-center justify-center gap-1.5 rounded-lg text-xs font-semibold transition-colors ${preference === value ? "bg-raised text-ink ring-1 ring-line" : "text-ink-soft hover:text-ink"}`}
+        >
+          <Icon className="size-3.5" aria-hidden />
+          {label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function UserMenu() {
   const user = useSession((s) => s.user);
   const logout = useLogout();
@@ -437,14 +526,18 @@ function UserMenu() {
             </button>
           ))}
           <div className="my-2 border-t border-line" />
-          <Link to="/panel/perfil" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold hover:bg-subtle">
-            <UserRound className="size-4.5" aria-hidden />
-            Mis datos
-          </Link>
-          <Link to="/panel/seguridad" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold hover:bg-subtle">
-            <ShieldCheck className="size-4.5" aria-hidden />
-            Seguridad y privacidad
-          </Link>
+          {ACCOUNT_LINKS.map(({ to, label, icon: Icon }) => (
+            <Link key={to} to={to} className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold hover:bg-subtle">
+              <Icon className="size-4.5" aria-hidden />
+              {label}
+            </Link>
+          ))}
+          <div className="my-2 border-t border-line" />
+          <p className="px-3 pb-1.5 text-xs font-bold text-ink-soft">Apariencia</p>
+          <div className="px-1 pb-1">
+            <ThemeChoice />
+          </div>
+          <div className="my-2 border-t border-line" />
           <button type="button" onClick={logout} className="flex w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold hover:bg-subtle">
             <LogOut className="size-4.5" aria-hidden />
             Cerrar sesión
@@ -508,14 +601,14 @@ export function AppLayout() {
             <Logo />
           </Link>
           <SearchBox />
+          {/* "Pedir cita" es la única acción primaria de la cabecera; el tema está en el menú de usuario. */}
           <div className="ml-auto flex items-center gap-1">
-            <span className="hidden sm:block">
+            <span className="mr-1 hidden sm:block">
               <ButtonLink to="/reservar" size="sm">
                 <Plus className="size-4" aria-hidden />
                 Pedir cita
               </ButtonLink>
             </span>
-            <ThemeToggle />
             <NotificationsMenu />
             <UserMenu />
           </div>
