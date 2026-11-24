@@ -35,6 +35,26 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
+      # `cache: maven` solo guarda ~/.m2/repository. El wrapper deja la distribución de Maven en
+      # ~/.m2/wrapper y, sin esta caché, la descarga de Maven Central en cada ejecución, que a
+      # veces rechaza a los runners (VIT-114).
+      - name: Caché de la distribución de Maven
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/wrapper
+          key: maven-wrapper-${{ hashFiles('apps/api/.mvn/wrapper/maven-wrapper.properties') }}
+
+      # Si la caché no está, se baja Maven con hasta tres intentos antes de compilar.
+      - name: Descargar Maven
+        working-directory: apps/api
+        run: |
+          for attempt in 1 2 3; do
+            ./mvnw -B -q --version && exit 0
+            echo "No se pudo descargar Maven (intento $attempt de 3)"
+            sleep $((attempt * 20))
+          done
+          exit 1
+
       # verify ejecuta los tests de integración, que levantan postgres:16-alpine
       # con Testcontainers y aplican las migraciones de Flyway desde cero.
       - name: mvnw verify
@@ -63,6 +83,13 @@ jobs:
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile
+
+      # Los tipos del frontend se generan de docs/openapi.json: si alguien cambia el contrato y
+      # no los regenera, falla aquí y no en producción.
+      - name: Tipos del contrato al día
+        run: |
+          pnpm --filter web api:types
+          git diff --exit-code -- apps/web/src/shared/api/schema.d.ts
 
       - name: Lint
         run: pnpm --filter web lint

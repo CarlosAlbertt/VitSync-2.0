@@ -5,8 +5,8 @@ const RELOADED = "msw-reloaded";
 
 /**
  * "all": todo simulado, sin backend.
- * "missing": la identidad (/auth, /me) la responde el backend real a través del proxy de Vite;
- * el worker solo simula lo que la API aún no tiene.
+ * "missing": identidad (/auth, /me) y catálogo los responde el backend real a través del proxy
+ * de Vite; el worker solo simula lo que la API aún no tiene (agenda, citas, informes).
  */
 export async function startMocks(mode: "all" | "missing") {
   const worker = setupWorker(...(mode === "all" ? handlers : missingHandlers));

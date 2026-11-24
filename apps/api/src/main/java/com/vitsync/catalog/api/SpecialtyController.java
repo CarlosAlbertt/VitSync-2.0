@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -24,6 +25,8 @@ import org.springframework.web.bind.annotation.RestController;
  * Especialidades: {@code /api/v1/specialties}. Público, sin token (SecurityConfig): el
  * visitante consulta el catálogo antes de tener cuenta.
  */
+// @SecurityRequirements vacío: público, sin el candado de Bearer que el contrato pone por defecto.
+@SecurityRequirements
 @RestController
 @RequestMapping("/api/v1/specialties")
 @Tag(name = "Catalog", description = "Public catalog: specialties, facilities and doctors")

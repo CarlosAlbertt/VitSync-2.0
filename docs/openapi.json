@@ -361,6 +361,7 @@
             "description" : "VALIDATION_FAILED or MALFORMED_REQUEST (facility is not a UUID)"
           }
         },
+        "security" : [ ],
         "summary" : "List the doctors open to the public",
         "tags" : [ "Catalog" ]
       }
@@ -414,6 +415,7 @@
             "description" : "VALIDATION_FAILED"
           }
         },
+        "security" : [ ],
         "summary" : "List active facilities",
         "tags" : [ "Catalog" ]
       }
@@ -562,6 +564,7 @@
             "description" : "VALIDATION_FAILED or MALFORMED_REQUEST (unknown kind)"
           }
         },
+        "security" : [ ],
         "summary" : "List active specialties",
         "tags" : [ "Catalog" ]
       }
@@ -603,7 +606,8 @@
           "specialty" : {
             "$ref" : "#/components/schemas/SpecialtySummary"
           }
-        }
+        },
+        "required" : [ "bio", "facilities", "firstName", "lastName", "licenseNumber", "publicId", "specialty" ]
       },
       "FacilityResponse" : {
         "type" : "object",
@@ -632,7 +636,8 @@
             "type" : "string",
             "format" : "uuid"
           }
-        }
+        },
+        "required" : [ "address", "city", "name", "phone", "postalCode", "publicId" ]
       },
       "FacilitySummary" : {
         "type" : "object",
@@ -649,7 +654,8 @@
             "type" : "string",
             "format" : "uuid"
           }
-        }
+        },
+        "required" : [ "city", "name", "publicId" ]
       },
       "LoginRequest" : {
         "type" : "object",
@@ -702,7 +708,8 @@
             "type" : "string",
             "enum" : [ "PATIENT", "DOCTOR", "ADMIN" ]
           }
-        }
+        },
+        "required" : [ "email", "emailVerified", "firstName", "id", "lastName", "locale", "phone", "role" ]
       },
       "PageMetadata" : {
         "type" : "object",
@@ -727,7 +734,8 @@
             "format" : "int32",
             "example" : 1
           }
-        }
+        },
+        "required" : [ "number", "size", "totalElements", "totalPages" ]
       },
       "PageResponseDoctorResponse" : {
         "type" : "object",
@@ -741,7 +749,8 @@
           "page" : {
             "$ref" : "#/components/schemas/PageMetadata"
           }
-        }
+        },
+        "required" : [ "content", "page" ]
       },
       "PageResponseFacilityResponse" : {
         "type" : "object",
@@ -755,7 +764,8 @@
           "page" : {
             "$ref" : "#/components/schemas/PageMetadata"
           }
-        }
+        },
+        "required" : [ "content", "page" ]
       },
       "PageResponseSpecialtyResponse" : {
         "type" : "object",
@@ -769,7 +779,8 @@
           "page" : {
             "$ref" : "#/components/schemas/PageMetadata"
           }
-        }
+        },
+        "required" : [ "content", "page" ]
       },
       "PasswordResetRequest" : {
         "type" : "object",
@@ -890,7 +901,8 @@
             "type" : "string",
             "example" : "PENDING_VERIFICATION"
           }
-        }
+        },
+        "required" : [ "email", "status" ]
       },
       "SessionResponse" : {
         "type" : "object",
@@ -902,7 +914,8 @@
           "user" : {
             "$ref" : "#/components/schemas/MeResponse"
           }
-        }
+        },
+        "required" : [ "accessToken", "user" ]
       },
       "SpecialtyResponse" : {
         "type" : "object",
@@ -933,7 +946,8 @@
             "type" : "string",
             "example" : "cardiologia"
           }
-        }
+        },
+        "required" : [ "description", "doctorCount", "kind", "name", "publicId", "slug" ]
       },
       "SpecialtySummary" : {
         "type" : "object",
@@ -950,7 +964,8 @@
             "type" : "string",
             "example" : "cardiologia"
           }
-        }
+        },
+        "required" : [ "name", "publicId", "slug" ]
       },
       "UpdateMeRequest" : {
         "type" : "object",
